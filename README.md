@@ -19,10 +19,13 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 
 ### Descoberta de dispositivos
 - Deteção automática da rede local: interface, IP, máscara, gateway e intervalo da sub-rede. Ignora adaptadores virtuais (VPN, Hyper-V, VirtualBox…).
-- Descoberta por **ARP** através da API nativa do Windows (`SendARP` / `iphlpapi.dll`), com ping como alternativa.
-- **Scan profundo** opcional, que percorre toda a sub-rede.
-- Resolução de **hostname** por DNS reverso.
-- Identificação do **fabricante** pelo prefixo do MAC (OUI) e classificação do **tipo de dispositivo** pelo fabricante e pelo hostname: router, computador, telemóvel, TV, impressora, consola, câmara, servidor…
+- Descoberta por **ARP** em toda a sub-rede: o Windows resolve todos os endereços em paralelo e o Nodar lê a tabela de vizinhos (`GetIpNetTable2`). Uma rede /23 (510 endereços) demora cerca de 3 s, sem privilégios de administrador.
+- **Não depende de ping**: iPhones bloqueados, Macs com firewall, impressoras e muitos aparelhos IoT ignoram ping, mas respondem sempre a ARP.
+- Redes até 1024 endereços são sempre varridas por inteiro; **Sub-rede completa** alarga o varrimento a redes maiores.
+- Nome por DNS reverso (o nome que o router atribui) e por **Bonjour/mDNS**: Macs, iPhones, iPads, Apple TV, Chromecast e impressoras anunciam o nome ("MacBook Pro da Ana") e o modelo.
+- **Fabricante** pelo registo oficial do IEEE (cerca de 40 000 fabricantes), descarregado e guardado em cache. Dispositivos com **endereço Wi-Fi privado** (MAC aleatório) aparecem como tal e são identificados por Bonjour.
+- **Tipo de dispositivo** pelo modelo, pelo fabricante e pelo hostname: router, computador, telemóvel, TV, impressora, consola, câmara, casa inteligente, servidor…
+- Dispositivos atrás de um **repetidor Wi-Fi** que partilha o mesmo MAC continuam separados (identificados por MAC+IP).
 - Marca o dispositivo que corresponde a este PC.
 
 ### Análise
@@ -109,6 +112,8 @@ Cada serviço mostra o estado da verificação: *verificado*, *verificado com ca
 ### Privacidade e rede
 - Para a NVD só é enviado o **identificador do produto** (ex.: `cpe:2.3:a:openbsd:openssh`). **Não são enviados IPs, MACs, hostnames nem as versões detetadas.** A comparação de versões é feita no teu PC.
 - O catálogo KEV é descarregado inteiro, sem nenhum dado teu.
+- Para identificar fabricantes, o Nodar descarrega o registo público do IEEE (`standards-oui.ieee.org`) uma vez por mês. Nenhum dado teu é enviado.
+- As perguntas Bonjour/mDNS e ARP ficam só na tua rede local.
 - Os dados ficam em cache em `%LOCALAPPDATA%\Nodar\cache\`: a NVD durante 3 dias e o KEV durante 1. Sem internet, é usada a cache existente e a app avisa.
 
 ### Chave da NVD (opcional)
@@ -132,8 +137,12 @@ src/Nodar.Core/                      # Lógica, sem interface gráfica
 ├── Monitoring/DeviceTracker.cs      # Histórico, dispositivos novos e monitorizados
 ├── Settings/AppSettings.cs          # Preferências
 └── Services/
-    ├── NetworkDiscoveryService.cs   # Deteção da rede, ARP, ping, DNS
-    ├── VendorService.cs             # Base OUI (fabricante) e tipo de dispositivo
+    ├── NetworkDiscoveryService.cs   # Orquestração do scan (em paralelo)
+    ├── NeighborDiscovery.cs         # Descoberta ARP (tabela de vizinhos do Windows)
+    ├── MdnsProbe.cs                 # Bonjour/mDNS: nome e modelo
+    ├── DeviceIdentification.cs      # Modelo → família e tipo (Mac14,7 → Mac)
+    ├── OuiRegistry.cs               # Registo de fabricantes do IEEE
+    ├── VendorService.cs             # Fabricante e tipo de dispositivo
     ├── OSFingerprintService.cs      # Fingerprint de sistema operativo
     ├── OSFingerprintDatabase.cs     # Assinaturas de SO
     ├── ServiceDetectionService.cs   # Leitura de banners (TCP e TLS, com timeouts)
@@ -163,7 +172,8 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 ## Limitações
 
 - Só analisa a rede local onde o PC está ligado.
-- Alguns dispositivos não respondem a ping nem a ARP (firewall, modo de poupança de energia, smartphones com MAC aleatório) e podem não aparecer ou aparecer de forma intermitente.
+- Dispositivos em repouso profundo ou desligados do Wi-Fi podem falhar um scan. Para não gerar alarmes falsos, só são dados como "saídos" depois de falharem dois scans seguidos.
+- iPhones e Androids podem **trocar o endereço Wi-Fi privado** (por exemplo, com "endereço rotativo" no iOS 18). Quando isso acontece, aparecem como um dispositivo novo.
 - A deteção de SO é **heurística** e pode falhar, sobretudo com dispositivos IoT.
 - A verificação de vulnerabilidades depende do banner. Muitos dispositivos (routers, câmaras, IoT) não anunciam versão. Uma correspondência por versão **não confirma** que o dispositivo está vulnerável. Não substitui uma auditoria de segurança a sério.
 - As descrições dos CVEs vêm da NVD, em inglês.
@@ -180,7 +190,8 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 - [x] Interface moderna (Avalonia) e lógica separada em `Nodar.Core`
 - [ ] Notificações do Windows e monitorização em segundo plano (bandeja do sistema)
 - [ ] Nomes personalizados e "dispositivos de confiança"
-- [ ] Deteção por mDNS / NetBIOS / SSDP para identificar melhor os dispositivos
+- [x] Identificação por Bonjour/mDNS e registo de fabricantes do IEEE
+- [ ] Identificação por NetBIOS e SSDP/UPnP (Windows, Smart TVs, consolas)
 - [ ] Ícone da aplicação e screenshots no README
 - [ ] Testes dos ViewModels da interface (o Core já tem 155 testes)
 
