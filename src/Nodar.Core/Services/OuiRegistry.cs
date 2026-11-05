@@ -24,7 +24,7 @@ public static class OuiRegistry
     public static int Count => _table?.Count ?? 0;
 
     public static string CachePath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Nodar", "cache", "oui.tsv");
+        Path.Combine(NodarPaths.CacheDirectory, "oui.tsv");
 
     /// <summary>Fabricante (nome curto) para um MAC, ou <c>null</c> se o registo não estiver carregado/não o conhecer.</summary>
     public static string? Lookup(string mac)

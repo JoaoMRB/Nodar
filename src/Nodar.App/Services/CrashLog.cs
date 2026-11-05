@@ -4,7 +4,7 @@ namespace Nodar.App.Services;
 public static class CrashLog
 {
     public static string Directory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Nodar", "logs");
+        Path.Combine(Nodar.Core.NodarPaths.DataDirectory, "logs");
 
     public static string? Write(Exception ex, string context)
     {

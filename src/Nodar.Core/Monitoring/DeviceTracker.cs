@@ -39,8 +39,7 @@ public sealed class DeviceTracker
         _now = clock ?? (() => DateTime.Now);
     }
 
-    public static string DefaultDataDirectory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Nodar");
+    public static string DefaultDataDirectory => NodarPaths.DataDirectory;
 
     public string DataDirectory { get; }
 

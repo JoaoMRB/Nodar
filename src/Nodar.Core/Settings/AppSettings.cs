@@ -36,7 +36,7 @@ public sealed class AppSettings
     };
 
     public static string DefaultPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Nodar", "settings.json");
+        NodarPaths.SettingsFile;
 
     public static AppSettings Load(string? path = null)
     {
