@@ -92,6 +92,9 @@ public static class NetworkDiscoveryService
             DevicesFound = 0
         });
 
+        // Registo oficial de fabricantes (IEEE): carrega da cache ou descarrega em paralelo com a descoberta.
+        var ouiLoading = OuiRegistry.EnsureLoadedAsync(TimeSpan.FromSeconds(8), options.CancellationToken);
+
         // Presença decidida por ARP, sem exigir ping (iPhones, Macs e muitos outros ignoram ping).
         var neighbors = await NeighborDiscovery.DiscoverAsync(network, options.DeepScan, options.CancellationToken);
         var discovered = neighbors.Devices;
@@ -111,9 +114,15 @@ public static class NetworkDiscoveryService
         var processed = 0;
         var vulnerabilityService = options.VulnerabilityScan ? new Vulnerabilities.VulnerabilityService() : null;
 
+        // Bonjour/mDNS: nome e modelo de Macs, iPhones, iPads, Chromecast, impressoras… (identifica
+        // dispositivos com MAC privado, onde o fabricante não se sabe pelo MAC).
+        options.Progress?.Report(new ScanProgress { Percent = 20, Message = "A identificar por Bonjour (mDNS)…", DevicesFound = total });
+        var identities = await MdnsProbe.QueryAsync(discovered.Keys.ToList(), options.CancellationToken);
+        await ouiLoading;
+
         // Lista preliminar logo após a descoberta (a interface mostra-a enquanto os detalhes chegam).
         options.DevicesDiscovered?.Report(discovered
-            .Select(d => BasicDevice(d.Key, d.Value, "", network))
+            .Select(d => BasicDevice(d.Key, d.Value, "", network, identities.GetValueOrDefault(d.Key)))
             .ToList());
 
         options.Progress?.Report(new ScanProgress
@@ -130,7 +139,8 @@ public static class NetworkDiscoveryService
             new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = options.CancellationToken },
             async (pair, ct) =>
             {
-                analyzed.Add(await AnalyzeDeviceAsync(pair.Key, pair.Value, network, options, vulnerabilityService, ct));
+                analyzed.Add(await AnalyzeDeviceAsync(pair.Key, pair.Value, network, options, vulnerabilityService,
+                    identities.GetValueOrDefault(pair.Key), ct));
                 var done = Interlocked.Increment(ref processed);
                 options.Progress?.Report(new ScanProgress
                 {
@@ -180,25 +190,41 @@ public static class NetworkDiscoveryService
         return vendor;
     }
 
-    private static DeviceInfo BasicDevice(string ip, string mac, string hostname, LocalNetworkInfo network)
+    private static DeviceInfo BasicDevice(string ip, string mac, string hostname, LocalNetworkInfo network, MdnsProbe.Identity? identity)
     {
         var vendor = VendorFor(mac, ip, network);
+        var described = identity != null ? DeviceIdentification.Describe(identity) : null;
+
+        // Hostname: o do DNS do router, ou o .local do Bonjour se o do router não disser nada (ex.: o MAC).
+        if (DeviceIdentification.IsMeaninglessHostname(hostname) && !string.IsNullOrWhiteSpace(identity?.Hostname)
+            && !DeviceIdentification.IsMeaninglessHostname(identity.Hostname))
+            hostname = identity.Hostname!;
+        if (DeviceIdentification.IsMeaninglessHostname(hostname))
+            hostname = "";
+
+        if (!string.IsNullOrWhiteSpace(described?.Vendor) && (vendor is "" or "Desconhecido" || vendor == VendorService.PrivateAddressVendor))
+            vendor = described.Vendor!;
+
         return new DeviceInfo
         {
             IpAddress = ip,
             MacAddress = string.IsNullOrEmpty(mac) ? "—" : VendorService.NormalizeMac(mac),
             Hostname = hostname,
+            FriendlyName = described?.FriendlyName ?? "",
+            Model = described?.Model ?? "",
+            ModelId = identity?.ModelId ?? "",
             Vendor = vendor,
             Status = "Online",
             IsLocalDevice = ip == network.IpAddress,
-            DeviceType = VendorService.GetDeviceType(vendor, hostname),
+            // O gateway é, por definição, o router (seja qual for o fabricante: Sagemcom, ZTE, TP-Link…).
+            DeviceType = ip == network.Gateway ? "Router" : described?.DeviceType ?? VendorService.GetDeviceType(vendor, hostname),
             LastSeen = DateTime.Now
         };
     }
 
     private static async Task<DeviceInfo> AnalyzeDeviceAsync(
         string ip, string mac, LocalNetworkInfo network, ScanOptions options,
-        Vulnerabilities.VulnerabilityService? vulnerabilityService, CancellationToken ct)
+        Vulnerabilities.VulnerabilityService? vulnerabilityService, MdnsProbe.Identity? identity, CancellationToken ct)
     {
         var hostname = await ResolveHostnameAsync(ip);
         if (ip == network.Gateway && string.IsNullOrWhiteSpace(hostname))
@@ -231,12 +257,15 @@ public static class NetworkDiscoveryService
             osConfidence = osResult.Confidence;
         }
 
-        var basic = BasicDevice(ip, mac, hostname, network);
+        var basic = BasicDevice(ip, mac, hostname, network, identity);
         return new DeviceInfo
         {
             IpAddress = basic.IpAddress,
             MacAddress = basic.MacAddress,
             Hostname = basic.Hostname,
+            FriendlyName = basic.FriendlyName,
+            Model = basic.Model,
+            ModelId = basic.ModelId,
             Vendor = basic.Vendor,
             Status = basic.Status,
             IsLocalDevice = basic.IsLocalDevice,

@@ -192,6 +192,10 @@ public sealed class DeviceTracker
             if (!string.IsNullOrWhiteSpace(device.Vendor) && device.Vendor != "Desconhecido")
                 entry.Vendor = device.Vendor;
             entry.DeviceType = device.DeviceType;
+            if (!string.IsNullOrWhiteSpace(device.FriendlyName))
+                entry.FriendlyName = device.FriendlyName;
+            if (!string.IsNullOrWhiteSpace(device.Model))
+                entry.Model = device.Model;
             entry.Status = Online;
             entry.SeenAt = now;
             entry.MissedScans = 0;

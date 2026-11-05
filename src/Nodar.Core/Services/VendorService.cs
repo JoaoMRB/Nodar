@@ -799,6 +799,11 @@ public static class VendorService
             return "Desconhecido";
         }
 
+        // Registo oficial do IEEE (completo) quando já está carregado; senão, a tabela embutida.
+        var official = OuiRegistry.Lookup(mac);
+        if (official != null)
+            return official;
+
         var normalized = NormalizeMac(mac);
         var prefix = normalized.Length >= 8 ? normalized[..8] : normalized;
         return Vendors.TryGetValue(prefix, out var vendor) ? vendor : "Desconhecido";
@@ -841,13 +846,13 @@ public static class VendorService
             return "Telemóvel";
         if (text.Contains("amazon") || text.Contains("echo") || text.Contains("fire"))
             return "Smart Home";
-        if (text.Contains("tp-link") || text.Contains("netgear") || text.Contains("d-link") || text.Contains("ubiquiti") || text.Contains("router") || text.Contains("gateway"))
+        if (text.Contains("tp-link") || text.Contains("netgear") || text.Contains("d-link") || text.Contains("ubiquiti") || text.Contains("router") || text.Contains("gateway") || ContainsAny(host, "archer", "deco", "extender", "repeater", "mesh", "fritz", "livebox", "speedport", "orbi", "eero"))
             return "Router";
         if (text.Contains("raspberry") || text.Contains("server") || text.Contains("nas"))
             return "Servidor";
         if (text.Contains("vmware") || text.Contains("virtualbox") || text.Contains("hyper-v") || text.Contains("qemu"))
             return "Virtual";
-        if (text.Contains("philips") || text.Contains("nest") || text.Contains("hue"))
+        if (text.Contains("philips") || text.Contains("nest") || text.Contains("hue") || ContainsAny(text, "tuya", "gree", "espressif", "shelly", "sonoff", "sonos", "ring", "ezviz", "meross", "broadlink"))
             return "Smart Home";
         if (text.Contains("microsoft") || text.Contains("desktop") || text.Contains("pc") || text.Contains("laptop"))
             return "Computador";

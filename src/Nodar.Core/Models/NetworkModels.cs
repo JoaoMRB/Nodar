@@ -29,7 +29,15 @@ public sealed class DeviceInfo
     public List<ServiceInfo> Services { get; init; } = [];
     public List<VulnerabilityInfo> Vulnerabilities { get; init; } = [];
 
+    /// <summary>Nome dado pelo utilizador e anunciado por mDNS (ex.: "MacBook Pro da Ana").</summary>
+    public string FriendlyName { get; init; } = "";
+    /// <summary>Modelo legível (ex.: "MacBook Pro", "iPhone", "EPSON ET-3850 Series").</summary>
+    public string Model { get; init; } = "";
+    /// <summary>Identificador de modelo anunciado (ex.: "Mac14,7").</summary>
+    public string ModelId { get; init; } = "";
+
     public string DisplayName =>
+        !string.IsNullOrWhiteSpace(FriendlyName) ? FriendlyName :
         !string.IsNullOrWhiteSpace(Hostname) ? Hostname :
         !string.IsNullOrWhiteSpace(Vendor) && Vendor != "Desconhecido" ? Vendor :
         IpAddress;
@@ -153,6 +161,8 @@ public sealed class DeviceHistoryEntry
     public string Hostname { get; set; } = "";
     public string Vendor { get; set; } = "";
     public string DeviceType { get; set; } = "Dispositivo";
+    public string FriendlyName { get; set; } = "";
+    public string Model { get; set; } = "";
     public string Status { get; set; } = "Online";
     /// <summary>Última vez visto online.</summary>
     public DateTime SeenAt { get; set; } = DateTime.Now;
