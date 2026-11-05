@@ -41,6 +41,10 @@ public sealed partial class MainViewModel : ObservableObject
         VulnerabilityScan = _settings.VulnerabilityScan;
         AutoRefresh = _settings.AutoRefresh;
         ShowOffline = _settings.ShowOffline;
+        WindowsNotifications = _settings.WindowsNotifications;
+        CloseToTray = _settings.CloseToTray;
+        StartWithWindows = _settings.StartWithWindows;
+        StartupRegistration.Refresh(_settings.StartWithWindows);
         SelectedInterval = IntervalOptions.FirstOrDefault(o => o.Seconds == _settings.RefreshIntervalSeconds) ?? IntervalOptions[1];
         _loadingSettings = false;
 
@@ -58,7 +62,61 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Chamado quando a janela abre: primeiro scan imediato.</summary>
-    public async Task StartAsync() => await ScanAsync();
+    public async Task StartAsync()
+    {
+        if (_started)
+            return;
+        _started = true;
+        await ScanAsync();
+    }
+
+    private bool _started;
+
+    // ================================================================ Segundo plano e notificações do Windows
+
+    [ObservableProperty] private bool _windowsNotifications;
+    [ObservableProperty] private bool _closeToTray;
+    [ObservableProperty] private bool _startWithWindows;
+
+    /// <summary>Iniciar com o Windows só é possível a partir do executável publicado (Nodar.exe).</summary>
+    public bool CanStartWithWindows => StartupRegistration.CurrentCommand() != null;
+
+    partial void OnWindowsNotificationsChanged(bool value) => SaveSettings();
+    partial void OnCloseToTrayChanged(bool value) => SaveSettings();
+
+    partial void OnStartWithWindowsChanged(bool value)
+    {
+        if (_loadingSettings)
+            return;
+        if (!StartupRegistration.Set(value) && value)
+        {
+            Toast("Não foi possível ativar", "Iniciar com o Windows só funciona a partir do Nodar.exe publicado.", ToastKind.Warning);
+            _loadingSettings = true;
+            StartWithWindows = false;
+            _loadingSettings = false;
+        }
+        SaveSettings();
+    }
+
+    /// <summary>Notificação do Windows, só quando o utilizador não está a ver a janela.</summary>
+    private void NotifySystem(string title, string message)
+    {
+        if (WindowsNotifications && !_platform.IsUserLooking)
+            _platform.NotifySystem(title, message);
+    }
+
+    /// <summary>A janela foi fechada mas a app continua na bandeja: explicar isso uma vez.</summary>
+    public void OnHiddenToTray()
+    {
+        if (_settings.TrayHintShown)
+            return;
+        _settings.TrayHintShown = true;
+        _settings.Save();
+        _platform.NotifySystem("O Nodar continua a vigiar a rede",
+            AutoRefresh
+                ? "Está na área de notificação e avisa-te quando entrar alguém novo. Para sair, usa o menu do ícone."
+                : "Está na área de notificação. Ativa a atualização automática para receberes avisos.");
+    }
 
     // ================================================================ Rede
 
@@ -189,6 +247,9 @@ public sealed partial class MainViewModel : ObservableObject
         _settings.AutoRefresh = AutoRefresh;
         _settings.ShowOffline = ShowOffline;
         _settings.RefreshIntervalSeconds = SelectedInterval?.Seconds ?? 120;
+        _settings.WindowsNotifications = WindowsNotifications;
+        _settings.CloseToTray = CloseToTray;
+        _settings.StartWithWindows = StartWithWindows;
         _settings.Save();
     }
 
@@ -312,18 +373,37 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void AnnounceChanges(TrackerUpdate update, ScanResult result)
     {
+        string Describe(DeviceInfo d)
+        {
+            var item = FindItem(d);
+            var name = item?.DisplayName ?? d.IpAddress;
+            var detail = item != null && item.Vendor != "Desconhecido" ? item.Vendor : d.DeviceType;
+            return $"{name} · {d.IpAddress}" + (string.IsNullOrWhiteSpace(detail) || detail == "Dispositivo" ? "" : $" · {detail}");
+        }
+
+        // Dentro da app: um aviso por dispositivo (até 3).
         foreach (var device in update.NewDevices.Take(3))
-            Toast("Novo dispositivo na rede", $"{FindItem(device)?.DisplayName ?? device.IpAddress} · {device.IpAddress}", ToastKind.Info);
+            Toast("Novo dispositivo na rede", Describe(device), ToastKind.Info);
         if (update.NewDevices.Count > 3)
             Toast($"+{update.NewDevices.Count - 3} dispositivos novos", "", ToastKind.Info);
 
-        foreach (var e in update.WatchedArrived)
-            Toast($"{e.Watched.Name} entrou na rede", e.IpAddress, ToastKind.Success);
-        foreach (var e in update.WatchedLeft)
-            Toast($"{e.Watched.Name} saiu da rede", e.IpAddress, ToastKind.Warning);
+        // No Windows: uma só notificação para os novos (não inundar a central de notificações).
+        if (update.NewDevices.Count == 1)
+            NotifySystem("Novo dispositivo na rede", Describe(update.NewDevices[0]));
+        else if (update.NewDevices.Count > 1)
+            NotifySystem($"{update.NewDevices.Count} dispositivos novos na rede",
+                string.Join("\n", update.NewDevices.Take(4).Select(Describe)) + (update.NewDevices.Count > 4 ? "\n…" : ""));
 
-        if (update.NewDevices.Count > 0 || update.WatchedArrived.Count > 0 || update.WatchedLeft.Count > 0)
-            _platform.FlashWindow();
+        foreach (var e in update.WatchedArrived)
+        {
+            Toast($"{e.Watched.Name} entrou na rede", e.IpAddress, ToastKind.Success);
+            NotifySystem($"{e.Watched.Name} entrou na rede", $"{e.DeviceName} · {e.IpAddress}");
+        }
+        foreach (var e in update.WatchedLeft)
+        {
+            Toast($"{e.Watched.Name} saiu da rede", e.IpAddress, ToastKind.Warning);
+            NotifySystem($"{e.Watched.Name} saiu da rede", $"Visto pela última vez em {e.IpAddress}");
+        }
 
         var sourceProblem = result.Devices.SelectMany(d => d.Services)
             .Any(s => s.VulnerabilityCheck is VulnerabilityCheckStatus.SourceUnavailable or VulnerabilityCheckStatus.CheckedWithStaleData);

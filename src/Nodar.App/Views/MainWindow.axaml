@@ -222,6 +222,25 @@
                         <TextBlock Classes="caption" Text="Dispositivos conhecidos que não estão ligados" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowOffline}" />
                     </Grid>
+
+                    <Border Classes="divider" />
+                    <TextBlock Classes="overline" Text="SEGUNDO PLANO" />
+
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Notificações do Windows" />
+                        <TextBlock Classes="caption" Text="Dispositivos novos e monitorizados, quando a janela não está à vista" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding WindowsNotifications}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Continuar na bandeja ao fechar" />
+                        <TextBlock Classes="caption" Text="Fechar a janela não para a vigilância; para sair, usa o ícone" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding CloseToTray}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CanStartWithWindows}">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Iniciar com o Windows" />
+                        <TextBlock Classes="caption" Text="Arranca minimizado na bandeja" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartWithWindows}" />
+                    </Grid>
                   </StackPanel>
                 </Flyout>
               </Button.Flyout>

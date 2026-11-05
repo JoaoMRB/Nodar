@@ -18,6 +18,15 @@ public sealed class AppSettings
     public int RefreshIntervalSeconds { get; set; } = 120;
     public bool ShowOffline { get; set; } = true;
 
+    /// <summary>Notificações do Windows quando a janela não está à vista.</summary>
+    public bool WindowsNotifications { get; set; } = true;
+    /// <summary>Fechar a janela deixa o Nodar a correr na bandeja (área de notificação).</summary>
+    public bool CloseToTray { get; set; } = true;
+    /// <summary>Arrancar com o Windows, minimizado na bandeja.</summary>
+    public bool StartWithWindows { get; set; }
+    /// <summary>Já foi mostrado o aviso de que o Nodar continua na bandeja ao fechar.</summary>
+    public bool TrayHintShown { get; set; }
+
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
