@@ -1,0 +1,90 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Nodar · tokens visuais
+    Escuro, translúcido (Mica/Acrylic), acento violeta→azul. Superfícies são camadas brancas de baixa opacidade
+    sobre o fundo translúcido, com contornos subtis e sombras suaves.
+  -->
+
+  <!-- Fundo da janela por cima do Mica/Acrylic (se o sistema não suportar transparência, fica quase sólido) -->
+  <Color x:Key="WindowTintColor">#D90B0D14</Color>
+  <Color x:Key="SidebarTintColor">#66070910</Color>
+
+  <!-- Texto -->
+  <Color x:Key="TextPrimaryColor">#F4F5F8</Color>
+  <Color x:Key="TextSecondaryColor">#A1A7B5</Color>
+  <Color x:Key="TextTertiaryColor">#6B7180</Color>
+
+  <!-- Acento -->
+  <Color x:Key="AccentColor">#7C6CFF</Color>
+  <Color x:Key="AccentAltColor">#4C8DFF</Color>
+  <Color x:Key="AccentSoftColor">#267C6CFF</Color>
+
+  <!-- Estados -->
+  <Color x:Key="SuccessColor">#34D399</Color>
+  <Color x:Key="WarningColor">#FBBF24</Color>
+  <Color x:Key="DangerColor">#F87171</Color>
+  <Color x:Key="CriticalColor">#FF4D6D</Color>
+  <Color x:Key="InfoColor">#60A5FA</Color>
+
+  <SolidColorBrush x:Key="WindowTintBrush" Color="{StaticResource WindowTintColor}" />
+  <SolidColorBrush x:Key="SidebarTintBrush" Color="{StaticResource SidebarTintColor}" />
+
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+  <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource TextTertiaryColor}" />
+
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#0AFFFFFF" />
+  <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#12FFFFFF" />
+  <SolidColorBrush x:Key="SurfaceStrongBrush" Color="#14FFFFFF" />
+  <SolidColorBrush x:Key="SurfaceSelectedBrush" Color="#1F7C6CFF" />
+  <SolidColorBrush x:Key="PanelBrush" Color="#E6111320" />
+  <SolidColorBrush x:Key="StrokeBrush" Color="#14FFFFFF" />
+  <SolidColorBrush x:Key="StrokeStrongBrush" Color="#24FFFFFF" />
+  <SolidColorBrush x:Key="StrokeSelectedBrush" Color="#807C6CFF" />
+
+  <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoftColor}" />
+  <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+  <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+  <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+  <SolidColorBrush x:Key="CriticalBrush" Color="{StaticResource CriticalColor}" />
+  <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}" />
+
+  <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Offset="0" Color="{StaticResource AccentColor}" />
+    <GradientStop Offset="1" Color="{StaticResource AccentAltColor}" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="AccentGradientHoverBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Offset="0" Color="#8E80FF" />
+    <GradientStop Offset="1" Color="#64A0FF" />
+  </LinearGradientBrush>
+
+  <!-- Brilho suave atrás do conteúdo (dá profundidade sem distrair) -->
+  <RadialGradientBrush x:Key="GlowBrush" Center="85%,0%" GradientOrigin="85%,0%" RadiusX="70%" RadiusY="60%">
+    <GradientStop Offset="0" Color="#227C6CFF" />
+    <GradientStop Offset="1" Color="#007C6CFF" />
+  </RadialGradientBrush>
+
+  <!-- Sombras -->
+  <BoxShadows x:Key="ShadowSoft">0 8 24 0 #33000000</BoxShadows>
+  <BoxShadows x:Key="ShadowRaised">0 18 48 0 #59000000, 0 2 6 0 #26000000</BoxShadows>
+  <BoxShadows x:Key="ShadowAccent">0 8 24 0 #557C6CFF</BoxShadows>
+
+  <!-- Geometria -->
+  <CornerRadius x:Key="RadiusSmall">8</CornerRadius>
+  <CornerRadius x:Key="RadiusMedium">12</CornerRadius>
+  <CornerRadius x:Key="RadiusLarge">16</CornerRadius>
+  <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+  <!-- Substituições do tema Fluent para combinar com o acento -->
+  <Color x:Key="SystemAccentColor">#7C6CFF</Color>
+  <Color x:Key="SystemAccentColorLight1">#8E80FF</Color>
+  <Color x:Key="SystemAccentColorLight2">#A79CFF</Color>
+  <Color x:Key="SystemAccentColorLight3">#C2BAFF</Color>
+  <Color x:Key="SystemAccentColorDark1">#6A58F2</Color>
+  <Color x:Key="SystemAccentColorDark2">#5745D9</Color>
+  <Color x:Key="SystemAccentColorDark3">#4535B8</Color>
+</ResourceDictionary>

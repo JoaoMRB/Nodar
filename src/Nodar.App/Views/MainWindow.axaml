@@ -1,0 +1,794 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Nodar.App.ViewModels"
+        x:Class="Nodar.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Nodar"
+        Width="1320" Height="840" MinWidth="1080" MinHeight="660"
+        WindowStartupLocation="CenterScreen"
+        Background="Transparent"
+        TransparencyLevelHint="AcrylicBlur, Mica, None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="PreferSystemChrome"
+        ExtendClientAreaTitleBarHeightHint="44">
+
+  <Window.Styles>
+    <!-- Indicador de atividade -->
+    <Style Selector="Path.spin">
+      <Setter Property="RenderTransform" Value="rotate(0deg)" />
+      <Style.Animations>
+        <Animation Duration="0:0:0.9" IterationCount="Infinite">
+          <KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <!-- Entrada suave das notificações -->
+    <Style Selector="Border.toast">
+      <Style.Animations>
+        <Animation Duration="0:0:0.25" Easing="CubicEaseOut">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0" /><Setter Property="TranslateTransform.Y" Value="12" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1" /><Setter Property="TranslateTransform.Y" Value="0" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <!-- Painel de detalhes a deslizar -->
+    <Style Selector="Border.details">
+      <Style.Animations>
+        <Animation Duration="0:0:0.22" Easing="CubicEaseOut">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0" /><Setter Property="TranslateTransform.X" Value="24" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1" /><Setter Property="TranslateTransform.X" Value="0" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </Window.Styles>
+
+  <Panel>
+    <!-- Camadas de fundo: tom escuro sobre o Acrylic/Mica + brilho do acento -->
+    <Border x:Name="Tint" Background="{StaticResource WindowTintBrush}" IsHitTestVisible="False" />
+    <Border Background="{StaticResource GlowBrush}" IsHitTestVisible="False" />
+
+    <Grid ColumnDefinitions="252,*">
+
+      <!-- ======================================================== Barra lateral -->
+      <Border Grid.Column="0" Background="{StaticResource SidebarTintBrush}"
+              BorderBrush="{StaticResource StrokeBrush}" BorderThickness="0,0,1,0">
+        <DockPanel Margin="16,18,16,16">
+
+          <!-- Marca -->
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="6,6,0,28">
+            <Border Width="36" Height="36" CornerRadius="11" Background="{StaticResource AccentGradientBrush}"
+                    BoxShadow="{StaticResource ShadowAccent}">
+              <Path Classes="icon lg" Data="{StaticResource Icon.Radar}" Stroke="White" StrokeThickness="2" />
+            </Border>
+            <StackPanel VerticalAlignment="Center" Spacing="1">
+              <TextBlock Text="Nodar" FontSize="16" FontWeight="SemiBold" LetterSpacing="-0.2" />
+              <TextBlock Classes="caption" Text="Rede local" FontSize="11.5" />
+            </StackPanel>
+          </StackPanel>
+
+          <Border DockPanel.Dock="Top" Classes="chip" Background="#26FBBF24" HorizontalAlignment="Left" Margin="6,-14,0,22" IsVisible="{Binding IsDemo}"
+                  ToolTip.Tip="Rede fictícia para demonstração. Os CVEs vêm da NVD real.">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Path Classes="icon sm" Data="{StaticResource Icon.Sparkle}" Stroke="{StaticResource WarningBrush}" />
+              <TextBlock Text="Modo demonstração" Foreground="{StaticResource WarningBrush}" />
+            </StackPanel>
+          </Border>
+
+          <!-- Rede (fundo da barra) -->
+          <Border DockPanel.Dock="Bottom" Classes="card" Padding="14" CornerRadius="14">
+            <StackPanel Spacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Width="8" Height="8" CornerRadius="4" VerticalAlignment="Center"
+                        Background="{StaticResource SuccessBrush}" IsVisible="{Binding HasNetwork}" />
+                <Border Width="8" Height="8" CornerRadius="4" VerticalAlignment="Center"
+                        Background="{StaticResource DangerBrush}" IsVisible="{Binding !HasNetwork}" />
+                <TextBlock Classes="h3" Text="{Binding InterfaceName}" />
+              </StackPanel>
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Classes="caption tertiary" Text="Este PC" Margin="0,0,12,4" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Classes="mono" Text="{Binding LocalIp}" HorizontalAlignment="Right" />
+                <TextBlock Grid.Row="1" Classes="caption tertiary" Text="Router" Margin="0,0,12,4" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding Gateway}" HorizontalAlignment="Right" />
+                <TextBlock Grid.Row="2" Classes="caption tertiary" Text="Rede" Margin="0,0,12,0" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Classes="mono" Text="{Binding NetworkRange}" HorizontalAlignment="Right" />
+              </Grid>
+              <Border Classes="chip" Background="#1AFBBF24" HorizontalAlignment="Left" IsVisible="{Binding ShowAdminHint}"
+                      ToolTip.Tip="Como administrador, a descoberta ARP e algumas análises ficam mais completas.">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Path Classes="icon sm" Data="{StaticResource Icon.Alert}" Stroke="{StaticResource WarningBrush}" />
+                  <TextBlock Text="Sem privilégios de admin" Foreground="{StaticResource WarningBrush}" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <!-- Navegação -->
+          <StackPanel Spacing="4">
+            <TextBlock Classes="overline" Text="VISTA" Margin="12,0,0,8" />
+
+            <Button Classes="nav" Classes.active="{Binding IsDevicesPage}"
+                    Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Devices}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Path Classes="icon" Data="{StaticResource Icon.Grid}" />
+                <TextBlock Grid.Column="1" Text="Dispositivos" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                <Border Grid.Column="2" Classes="chip" Padding="7,1" IsVisible="{Binding HasScanned}">
+                  <TextBlock Text="{Binding OnlineCount}" Foreground="{StaticResource TextSecondaryBrush}" />
+                </Border>
+              </Grid>
+            </Button>
+
+            <Button Classes="nav" Classes.active="{Binding IsSecurityPage}"
+                    Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Security}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Path Classes="icon" Data="{StaticResource Icon.Shield}" />
+                <TextBlock Grid.Column="1" Text="Segurança" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                <Border Grid.Column="2" Classes="chip" Padding="7,1" Background="#26FF4D6D" IsVisible="{Binding HasVulnerabilityData}">
+                  <TextBlock Text="{Binding VulnerabilityCount}" Foreground="{StaticResource CriticalBrush}" />
+                </Border>
+              </Grid>
+            </Button>
+
+            <Button Classes="nav" Classes.active="{Binding IsHistoryPage}"
+                    Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.History}">
+              <Grid ColumnDefinitions="Auto,*">
+                <Path Classes="icon" Data="{StaticResource Icon.Clock}" />
+                <TextBlock Grid.Column="1" Text="Histórico" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+              </Grid>
+            </Button>
+
+            <Button Classes="nav" Classes.active="{Binding IsWatchlistPage}"
+                    Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Watchlist}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Path Classes="icon" Data="{StaticResource Icon.Eye}" />
+                <TextBlock Grid.Column="1" Text="Monitorizados" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                <Border Grid.Column="2" Classes="chip" Padding="7,1" IsVisible="{Binding HasWatchItems}">
+                  <TextBlock Text="{Binding WatchItems.Count}" Foreground="{StaticResource TextSecondaryBrush}" />
+                </Border>
+              </Grid>
+            </Button>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- ======================================================== Conteúdo -->
+      <Grid Grid.Column="1" RowDefinitions="44,Auto,Auto,*">
+
+        <!-- Cabeçalho -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="32,4,28,18">
+          <StackPanel VerticalAlignment="Center" Spacing="4">
+            <TextBlock Classes="display" Text="{Binding PageTitle}" />
+            <TextBlock Classes="caption" Text="{Binding PageSubtitle}" FontSize="13" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <Panel Width="260" IsVisible="{Binding IsDevicesPage}">
+              <TextBox Classes="search" Watermark="Procurar dispositivos…" Text="{Binding SearchText}" />
+              <Path Classes="icon sm" Data="{StaticResource Icon.Search}" Stroke="{StaticResource TextTertiaryBrush}"
+                    HorizontalAlignment="Left" Margin="13,0,0,0" IsHitTestVisible="False" />
+            </Panel>
+
+            <!-- Opções de análise -->
+            <Button Classes="ghost icon" ToolTip.Tip="Opções de análise">
+              <Path Classes="icon" Data="{StaticResource Icon.Sliders}" />
+              <Button.Flyout>
+                <Flyout Placement="BottomEdgeAlignedRight">
+                  <StackPanel Width="360" Margin="18" Spacing="14">
+                    <StackPanel Spacing="2">
+                      <TextBlock Classes="h2" Text="Opções de análise" />
+                      <TextBlock Classes="caption" Text="{Binding ScanModeSummary}" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Sub-rede completa" />
+                        <TextBlock Classes="caption" Text="Mais lento; encontra dispositivos silenciosos" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding DeepScan}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Portas abertas" />
+                        <TextBlock Classes="caption" Text="Portas TCP mais comuns, incluindo as de routers" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding PortScan}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Serviços e versões" />
+                        <TextBlock Classes="caption" Text="Lê banners (SSH, HTTP/HTTPS, FTP, DNS…)" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding ServiceDetection}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Vulnerabilidades" />
+                        <TextBlock Classes="caption" Text="NVD e CISA KEV; só o nome do produto sai do PC" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding VulnerabilityScan}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Sistema operativo" />
+                        <TextBlock Classes="caption" Text="Estimativa por fingerprint TCP/IP" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding OsDetection}" />
+                    </Grid>
+
+                    <Border Classes="divider" />
+
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Atualização automática" />
+                        <TextBlock Classes="caption" Text="Volta a analisar em segundo plano" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoRefresh}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AutoRefresh}">
+                      <TextBlock Classes="caption" Text="Intervalo" VerticalAlignment="Center" />
+                      <ComboBox Grid.Column="1" MinWidth="140" ItemsSource="{Binding IntervalOptions}" SelectedItem="{Binding SelectedInterval}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Mostrar offline" />
+                        <TextBlock Classes="caption" Text="Dispositivos conhecidos que não estão ligados" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowOffline}" />
+                    </Grid>
+                  </StackPanel>
+                </Flyout>
+              </Button.Flyout>
+            </Button>
+
+            <!-- Exportar -->
+            <Button Classes="ghost icon" ToolTip.Tip="Exportar" IsEnabled="{Binding HasScanned}">
+              <Path Classes="icon" Data="{StaticResource Icon.Download}" />
+              <Button.Flyout>
+                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                  <MenuItem Header="Lista de dispositivos (CSV)" Command="{Binding ExportCsvCommand}" />
+                  <Separator />
+                  <MenuItem Header="Relatório HTML" Command="{Binding ExportReportCommand}" CommandParameter="html" />
+                  <MenuItem Header="Relatório Markdown" Command="{Binding ExportReportCommand}" CommandParameter="md" />
+                  <MenuItem Header="Relatório JSON" Command="{Binding ExportReportCommand}" CommandParameter="json" />
+                </MenuFlyout>
+              </Button.Flyout>
+            </Button>
+
+            <!-- Analisar / parar -->
+            <Button Classes="primary" Command="{Binding ScanCommand}" IsVisible="{Binding IsIdle}" MinWidth="128">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Classes="icon" Data="{StaticResource Icon.Radar}" Stroke="White" StrokeThickness="2" />
+                <TextBlock Text="Analisar" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Classes="ghost" Command="{Binding CancelScanCommand}" IsVisible="{Binding IsScanning}" MinWidth="128"
+                    ToolTip.Tip="Parar a análise">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Classes="icon spin" Data="M12 3 A9 9 0 0 1 21 12" Stroke="{StaticResource AccentBrush}" StrokeThickness="2.4" />
+                <TextBlock VerticalAlignment="Center">
+                  <Run Text="A analisar " /><Run Text="{Binding ScanProgress, StringFormat={}{0:0}%}" Foreground="{StaticResource TextSecondaryBrush}" />
+                </TextBlock>
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+
+        <!-- Progresso -->
+        <Grid Grid.Row="2" Margin="32,0,28,14" IsVisible="{Binding IsScanning}" ColumnDefinitions="*,Auto">
+          <ProgressBar Classes="thin" Value="{Binding ScanProgress}" Maximum="100" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Classes="caption" Text="{Binding ScanMessage}" Margin="14,0,0,0" MinWidth="220" TextTrimming="CharacterEllipsis" />
+        </Grid>
+
+        <!-- ================================================== Páginas -->
+        <Panel Grid.Row="3">
+
+          <!-- ============ Dispositivos -->
+          <Grid IsVisible="{Binding IsDevicesPage}" ColumnDefinitions="*,Auto">
+            <Grid RowDefinitions="Auto,*" Margin="32,0,28,24">
+
+              <!-- Estatísticas -->
+              <UniformGrid Columns="4" Margin="-6,0,-6,18">
+                <Border Classes="card" Margin="6" Padding="16,14">
+                  <StackPanel Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <Border Width="7" Height="7" CornerRadius="4" Background="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+                      <TextBlock Classes="caption" Text="Online agora" />
+                    </StackPanel>
+                    <TextBlock Classes="stat" Text="{Binding OnlineCount}" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="card" Margin="6" Padding="16,14">
+                  <StackPanel Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <Path Classes="icon sm" Data="{StaticResource Icon.Sparkle}" Stroke="#A79CFF" />
+                      <TextBlock Classes="caption" Text="Novos (24 h)" />
+                    </StackPanel>
+                    <TextBlock Classes="stat" Text="{Binding NewCount}" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="card" Margin="6" Padding="16,14">
+                  <StackPanel Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <Path Classes="icon sm" Data="{StaticResource Icon.Plug}" Stroke="{StaticResource InfoBrush}" />
+                      <TextBlock Classes="caption" Text="Serviços expostos" />
+                    </StackPanel>
+                    <TextBlock Classes="stat" Text="{Binding ExposedServiceCount}" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="card" Margin="6" Padding="16,14">
+                  <StackPanel Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <Path Classes="icon sm" Data="{StaticResource Icon.Shield}" Stroke="{StaticResource CriticalBrush}" />
+                      <TextBlock Classes="caption" Text="Vulnerabilidades" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Classes="stat" Text="{Binding VulnerabilityCount}" />
+                      <Border Classes="chip" Background="#26FF4D6D" VerticalAlignment="Center" IsVisible="{Binding KevCount, Converter={x:Static vm:Converters.IsPositive}}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <Path Classes="icon sm" Data="{StaticResource Icon.Flame}" Stroke="{StaticResource CriticalBrush}" />
+                          <TextBlock Foreground="{StaticResource CriticalBrush}"><Run Text="{Binding KevCount}" /><Run Text=" KEV" /></TextBlock>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <!-- Lista -->
+              <Panel Grid.Row="1">
+                <ListBox Classes="clean" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DeviceItemViewModel">
+                      <Border Classes="row">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                          <Border Classes="avatar" Background="{Binding IconTint}" Opacity="{Binding IsOnline, Converter={x:Static vm:Converters.OnlineOpacity}}">
+                            <Path Classes="icon lg" Data="{Binding Icon}" Stroke="{Binding IconGlyph}" />
+                          </Border>
+
+                          <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="3">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                              <TextBlock Classes="h3" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" MaxWidth="320" />
+                              <Border Classes="chip" Padding="7,1" Background="#267C6CFF" IsVisible="{Binding IsGateway}">
+                                <TextBlock Text="Router" Foreground="#C2BAFF" />
+                              </Border>
+                              <Border Classes="chip" Padding="7,1" Background="#264C8DFF" IsVisible="{Binding IsLocal}">
+                                <TextBlock Text="Este PC" Foreground="#A9C8FF" />
+                              </Border>
+                              <Border Classes="chip" Padding="7,1" Background="#2634D399" IsVisible="{Binding IsNew}">
+                                <TextBlock Text="Novo" Foreground="#6EE7B7" />
+                              </Border>
+                            </StackPanel>
+                            <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+
+                          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,18,0">
+                            <Border Classes="chip" IsVisible="{Binding HasOpenPorts}">
+                              <TextBlock Text="{Binding PortsText}" Foreground="{StaticResource TextSecondaryBrush}" />
+                            </Border>
+                            <Border Classes="chip" Background="{Binding TopSeveritySoftBrush}" IsVisible="{Binding HasVulnerabilities}">
+                              <StackPanel Orientation="Horizontal" Spacing="5">
+                                <Path Classes="icon sm" Data="{StaticResource Icon.Shield}" Stroke="{Binding TopSeverityBrush}" />
+                                <TextBlock Text="{Binding VulnBadgeText}" Foreground="{Binding TopSeverityBrush}" />
+                              </StackPanel>
+                            </Border>
+                          </StackPanel>
+
+                          <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" Width="128" VerticalAlignment="Center">
+                            <Border Width="7" Height="7" CornerRadius="4" Background="{Binding StatusBrush}" VerticalAlignment="Center" />
+                            <TextBlock Classes="caption" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+
+                          <Button Grid.Column="4" Classes="flat icon" Width="32" Height="32"
+                                  ToolTip.Tip="Vigiar: avisar quando entra ou sai"
+                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleWatchCommand}"
+                                  CommandParameter="{Binding}">
+                            <Panel>
+                              <Path Classes="icon" Data="{StaticResource Icon.Star}" IsVisible="{Binding !IsWatched}" Stroke="{StaticResource TextTertiaryBrush}" />
+                              <Path Classes="icon" Data="{StaticResource Icon.Star}" IsVisible="{Binding IsWatched}" Stroke="{StaticResource WarningBrush}" Fill="{StaticResource WarningBrush}" />
+                            </Panel>
+                          </Button>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Estados vazios -->
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" IsVisible="{Binding ShowFirstScan}">
+                  <Path Classes="icon spin" Data="M12 3 A9 9 0 0 1 21 12" Stroke="{StaticResource AccentBrush}" Width="28" Height="28" StrokeThickness="2.4" />
+                  <TextBlock Classes="h2" Text="A procurar dispositivos…" HorizontalAlignment="Center" />
+                  <TextBlock Classes="caption" Text="A primeira análise demora alguns segundos." HorizontalAlignment="Center" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" IsVisible="{Binding NoSearchResults}">
+                  <Path Classes="icon xl" Data="{StaticResource Icon.Search}" Stroke="{StaticResource TextTertiaryBrush}" />
+                  <TextBlock Classes="h2" Text="Sem resultados" HorizontalAlignment="Center" />
+                  <TextBlock Classes="caption" Text="Nenhum dispositivo corresponde à pesquisa." HorizontalAlignment="Center" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" IsVisible="{Binding ShowEmptyState}">
+                  <Path Classes="icon xl" Data="{StaticResource Icon.Globe}" Stroke="{StaticResource TextTertiaryBrush}" />
+                  <TextBlock Classes="h2" Text="Nenhum dispositivo encontrado" HorizontalAlignment="Center" />
+                  <TextBlock Classes="caption" Text="Verifica a ligação à rede e tenta outra vez." HorizontalAlignment="Center" />
+                </StackPanel>
+              </Panel>
+            </Grid>
+
+            <!-- Painel de detalhes -->
+            <Border Grid.Column="1" Classes="panel details" Width="372" Margin="0,0,24,24"
+                    IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).HasSelection}" DataContext="{Binding SelectedDevice}">
+              <Grid x:DataType="vm:DeviceItemViewModel" RowDefinitions="Auto,*">
+
+                <StackPanel Margin="22,20,22,16" Spacing="16">
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Border Classes="avatar" Width="52" Height="52" CornerRadius="15" Background="{Binding IconTint}">
+                      <Path Classes="icon xl" Data="{Binding Icon}" Stroke="{Binding IconGlyph}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="14,0,8,0" VerticalAlignment="Center" Spacing="3">
+                      <TextBlock Classes="h1" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                      <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Border Width="7" Height="7" CornerRadius="4" Background="{Binding StatusBrush}" VerticalAlignment="Center" />
+                        <TextBlock Classes="caption" Text="{Binding StatusText}" />
+                        <TextBlock Classes="caption tertiary" Text="·" />
+                        <TextBlock Classes="caption" Text="{Binding TypeLabel}" />
+                      </StackPanel>
+                    </StackPanel>
+                    <Button Grid.Column="2" Classes="flat icon" Width="30" Height="30" VerticalAlignment="Top"
+                            Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CloseDetailsCommand}">
+                      <Path Classes="icon sm" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                  </Grid>
+
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="ghost" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleWatchCommand}" CommandParameter="{Binding}">
+                      <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Panel>
+                          <Path Classes="icon sm" Data="{StaticResource Icon.Star}" IsVisible="{Binding !IsWatched}" />
+                          <Path Classes="icon sm" Data="{StaticResource Icon.Star}" IsVisible="{Binding IsWatched}" Stroke="{StaticResource WarningBrush}" Fill="{StaticResource WarningBrush}" />
+                        </Panel>
+                        <TextBlock Text="A vigiar" IsVisible="{Binding IsWatched}" />
+                        <TextBlock Text="Vigiar" IsVisible="{Binding !IsWatched}" />
+                      </StackPanel>
+                    </Button>
+                    <Button Classes="ghost" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CopyCommand}" CommandParameter="{Binding IpAddress}">
+                      <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Path Classes="icon sm" Data="{StaticResource Icon.Copy}" />
+                        <TextBlock Text="Copiar IP" />
+                      </StackPanel>
+                    </Button>
+                  </StackPanel>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+                  <StackPanel Spacing="22" Margin="22,0,22,22">
+
+                    <!-- Informação -->
+                    <Border Classes="card" Padding="16,6">
+                      <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        <Grid.Styles>
+                          <Style Selector="TextBlock.k"><Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" /><Setter Property="Margin" Value="0,9" /><Setter Property="FontSize" Value="12" /></Style>
+                          <Style Selector="SelectableTextBlock.v"><Setter Property="Margin" Value="0,9" /><Setter Property="FontSize" Value="12.5" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
+                        </Grid.Styles>
+                        <TextBlock Grid.Row="0" Classes="k" Text="Endereço IP" />
+                        <SelectableTextBlock Grid.Row="0" Grid.Column="1" Classes="v mono" Text="{Binding IpAddress}" />
+                        <TextBlock Grid.Row="1" Classes="k" Text="MAC" />
+                        <SelectableTextBlock Grid.Row="1" Grid.Column="1" Classes="v mono" Text="{Binding MacAddress}" />
+                        <TextBlock Grid.Row="2" Classes="k" Text="Hostname" />
+                        <SelectableTextBlock Grid.Row="2" Grid.Column="1" Classes="v" Text="{Binding Hostname}" />
+                        <TextBlock Grid.Row="3" Classes="k" Text="Fabricante" />
+                        <SelectableTextBlock Grid.Row="3" Grid.Column="1" Classes="v" Text="{Binding Vendor}" />
+                        <TextBlock Grid.Row="4" Classes="k" Text="Sistema" />
+                        <SelectableTextBlock Grid.Row="4" Grid.Column="1" Classes="v" Text="{Binding OperatingSystem}" />
+                        <TextBlock Grid.Row="5" Classes="k" Text="Visto pela 1.ª vez" />
+                        <SelectableTextBlock Grid.Row="5" Grid.Column="1" Classes="v" Text="{Binding FirstSeen}" />
+                        <TextBlock Grid.Row="6" Classes="k" Text="Última vez" />
+                        <SelectableTextBlock Grid.Row="6" Grid.Column="1" Classes="v" Text="{Binding LastSeen}" />
+                      </Grid>
+                    </Border>
+
+                    <!-- Serviços -->
+                    <StackPanel Spacing="10">
+                      <TextBlock Classes="overline" Text="SERVIÇOS" />
+                      <TextBlock Classes="caption" Text="Nenhum serviço detetado. Ativa “Portas” e “Serviços” nas opções." TextWrapping="Wrap" IsVisible="{Binding !HasServices}" />
+                      <ItemsControl ItemsSource="{Binding Services}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ServiceItemViewModel">
+                            <Border Classes="card" Padding="12,10" Margin="0,0,0,6" CornerRadius="12">
+                              <Grid ColumnDefinitions="Auto,*">
+                                <Border Classes="chip" Background="#1A4C8DFF" MinWidth="52" VerticalAlignment="Top">
+                                  <TextBlock Classes="mono" Text="{Binding Port}" Foreground="#A9C8FF" HorizontalAlignment="Center" FontSize="11.5" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="3">
+                                  <TextBlock Classes="h3" Text="{Binding Product}" TextWrapping="Wrap" />
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Classes="caption" Text="{Binding Name}" />
+                                    <TextBlock Classes="caption tertiary" Text="·" IsVisible="{Binding HasCheck}" />
+                                    <TextBlock Classes="caption" Text="{Binding CheckText}" Foreground="{Binding CheckBrush}" IsVisible="{Binding HasCheck}" />
+                                  </StackPanel>
+                                </StackPanel>
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+
+                    <!-- Vulnerabilidades -->
+                    <StackPanel Spacing="10" IsVisible="{Binding HasVulnerabilities}">
+                      <TextBlock Classes="overline" Text="VULNERABILIDADES POTENCIAIS" />
+                      <Border Classes="card" Padding="12,10" Background="#14FBBF24" BorderBrush="#33FBBF24" IsVisible="{Binding MayBeBackported}">
+                        <Grid ColumnDefinitions="Auto,*">
+                          <Path Classes="icon sm" Data="{StaticResource Icon.Info}" Stroke="{StaticResource WarningBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                          <TextBlock Grid.Column="1" Classes="caption" Margin="10,0,0,0" TextWrapping="Wrap"
+                                     Text="Pacote de distribuição: as correções podem ter sido aplicadas sem mudar a versão. Confirma no próprio sistema." />
+                        </Grid>
+                      </Border>
+                      <ItemsControl ItemsSource="{Binding Vulnerabilities}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:VulnerabilityItemViewModel">
+                            <Border Classes="card" Padding="0" Margin="0,0,0,8" CornerRadius="12" ClipToBounds="True">
+                              <Grid ColumnDefinitions="3,*">
+                                <Border Background="{Binding SeverityBrush}" />
+                                <StackPanel Grid.Column="1" Margin="14,12" Spacing="7">
+                                  <Grid ColumnDefinitions="*,Auto">
+                                    <Button Classes="link" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenUrlCommand}" CommandParameter="{Binding Url}">
+                                      <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <TextBlock Classes="mono" Text="{Binding Cve}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        <Path Classes="icon sm" Data="{StaticResource Icon.External}" Stroke="{StaticResource TextTertiaryBrush}" Width="11" Height="11" />
+                                      </StackPanel>
+                                    </Button>
+                                    <Border Grid.Column="1" Classes="chip" Background="{Binding SeveritySoftBrush}">
+                                      <TextBlock Foreground="{Binding SeverityBrush}"><Run Text="{Binding SeverityLabel}" /><Run Text=" · " /><Run Text="{Binding Score}" /></TextBlock>
+                                    </Border>
+                                  </Grid>
+                                  <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding IsKnownExploited}">
+                                    <Path Classes="icon sm" Data="{StaticResource Icon.Flame}" Stroke="{StaticResource CriticalBrush}" />
+                                    <TextBlock Classes="caption" Text="{Binding KevText}" Foreground="{StaticResource CriticalBrush}" FontWeight="Medium" />
+                                  </StackPanel>
+                                  <TextBlock Classes="caption" Text="{Binding Description}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                  <TextBlock Classes="caption tertiary" Text="{Binding Where}" FontSize="11.5" />
+                                </StackPanel>
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+
+                    <!-- Histórico -->
+                    <StackPanel Spacing="10" IsVisible="{Binding HasEvents}">
+                      <TextBlock Classes="overline" Text="ATIVIDADE" />
+                      <ItemsControl ItemsSource="{Binding Events}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:HistoryEventViewModel">
+                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,10">
+                              <Border Width="26" Height="26" CornerRadius="8" Background="{StaticResource SurfaceStrongBrush}">
+                                <Path Classes="icon sm" Data="{Binding Icon}" Stroke="{Binding Brush}" />
+                              </Border>
+                              <TextBlock Grid.Column="1" Text="{Binding Title}" Margin="10,0" VerticalAlignment="Center" />
+                              <TextBlock Grid.Column="2" Classes="caption" Text="{Binding When}" VerticalAlignment="Center" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </StackPanel>
+                </ScrollViewer>
+              </Grid>
+            </Border>
+          </Grid>
+
+          <!-- ============ Segurança -->
+          <ScrollViewer IsVisible="{Binding IsSecurityPage}" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="18" Margin="32,0,28,24">
+              <UniformGrid Columns="4" Margin="-6,0,-6,0" IsVisible="{Binding SecurityChecked}">
+                <Border Classes="card" Margin="6" Padding="16,14">
+                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="Críticas" />
+                    <TextBlock Classes="stat" Text="{Binding CriticalCount}" Foreground="{StaticResource CriticalBrush}" /></StackPanel>
+                </Border>
+                <Border Classes="card" Margin="6" Padding="16,14">
+                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="Altas" />
+                    <TextBlock Classes="stat" Text="{Binding HighCount}" Foreground="#FB923C" /></StackPanel>
+                </Border>
+                <Border Classes="card" Margin="6" Padding="16,14">
+                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="Médias e baixas" />
+                    <TextBlock Classes="stat" Text="{Binding MediumLowCount}" Foreground="{StaticResource WarningBrush}" /></StackPanel>
+                </Border>
+                <Border Classes="card" Margin="6" Padding="16,14">
+                  <StackPanel Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Path Classes="icon sm" Data="{StaticResource Icon.Flame}" Stroke="{StaticResource CriticalBrush}" />
+                      <TextBlock Classes="caption" Text="Exploradas ativamente" /></StackPanel>
+                    <TextBlock Classes="stat" Text="{Binding KevCount}" /></StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <Border Classes="card" Padding="14,12" IsVisible="{Binding SecurityChecked}">
+                <Grid ColumnDefinitions="Auto,*">
+                  <Path Classes="icon" Data="{StaticResource Icon.Info}" Stroke="{StaticResource InfoBrush}" VerticalAlignment="Top" />
+                  <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="4">
+                    <TextBlock Classes="caption" TextWrapping="Wrap"
+                               Text="Resultados potenciais: correspondência pela versão anunciada pelo serviço, com dados da NVD (NIST) e do catálogo CISA KEV. Configuração, módulos ativos e correções do fabricante podem mudar o resultado." />
+                    <TextBlock Classes="caption tertiary" Text="{Binding VulnerabilitySourceNote}" TextWrapping="Wrap" IsVisible="{Binding VulnerabilitySourceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+
+              <ItemsControl ItemsSource="{Binding AllVulnerabilities}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:VulnerabilityItemViewModel">
+                    <Border Classes="card" Padding="0" Margin="0,0,0,10" ClipToBounds="True">
+                      <Grid ColumnDefinitions="3,*,Auto">
+                        <Border Background="{Binding SeverityBrush}" />
+                        <StackPanel Grid.Column="1" Margin="18,14" Spacing="7">
+                          <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button Classes="link" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenUrlCommand}" CommandParameter="{Binding Url}">
+                              <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Classes="mono" Text="{Binding Cve}" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                                <Path Classes="icon sm" Data="{StaticResource Icon.External}" Stroke="{StaticResource TextTertiaryBrush}" Width="11" Height="11" />
+                              </StackPanel>
+                            </Button>
+                            <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding IsKnownExploited}">
+                              <Path Classes="icon sm" Data="{StaticResource Icon.Flame}" Stroke="{StaticResource CriticalBrush}" />
+                              <TextBlock Classes="caption" Text="{Binding KevText}" Foreground="{StaticResource CriticalBrush}" FontWeight="Medium" />
+                            </StackPanel>
+                          </StackPanel>
+                          <TextBlock Classes="caption" Text="{Binding Description}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="caption tertiary" Text="{Binding WhereWithDevice}" FontSize="11.5" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Margin="0,14,18,14" Spacing="4" HorizontalAlignment="Right">
+                          <Border Classes="chip" Background="{Binding SeveritySoftBrush}" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding SeverityLabel}" Foreground="{Binding SeverityBrush}" />
+                          </Border>
+                          <TextBlock Text="{Binding Score}" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Right" Foreground="{Binding SeverityBrush}" />
+                          <TextBlock Classes="caption tertiary" Text="CVSS" HorizontalAlignment="Right" FontSize="10.5" />
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,60,0,0" IsVisible="{Binding ShowSecurityAllClear}">
+                <Border Width="64" Height="64" CornerRadius="20" Background="#1A34D399" HorizontalAlignment="Center">
+                  <Path Classes="icon xl" Data="{StaticResource Icon.ShieldCheck}" Stroke="{StaticResource SuccessBrush}" />
+                </Border>
+                <TextBlock Classes="h2" Text="Tudo limpo" HorizontalAlignment="Center" />
+                <TextBlock Classes="caption" Text="Nenhuma vulnerabilidade conhecida para as versões detetadas." HorizontalAlignment="Center" />
+              </StackPanel>
+              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,60,0,0" IsVisible="{Binding ShowSecurityNotChecked}">
+                <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource SurfaceStrongBrush}" HorizontalAlignment="Center">
+                  <Path Classes="icon xl" Data="{StaticResource Icon.Shield}" Stroke="{StaticResource TextTertiaryBrush}" />
+                </Border>
+                <TextBlock Classes="h2" Text="Verificação desligada" HorizontalAlignment="Center" />
+                <TextBlock Classes="caption" Text="Ativa “Vulnerabilidades” nas opções de análise e volta a analisar." HorizontalAlignment="Center" />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- ============ Histórico -->
+          <Grid IsVisible="{Binding IsHistoryPage}" ColumnDefinitions="*,380" Margin="32,0,28,24">
+            <Border Classes="card" Padding="6">
+              <Grid RowDefinitions="Auto,*">
+                <TextBlock Classes="overline" Text="DISPOSITIVOS CONHECIDOS" Margin="14,12,0,10" />
+                <ListBox Grid.Row="1" Classes="clean" ItemsSource="{Binding KnownDevices}" Padding="8,0,8,4">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DeviceItemViewModel">
+                      <Border Classes="row" Background="Transparent" BorderThickness="0" Padding="8">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                          <Border Classes="avatar" Width="34" Height="34" CornerRadius="10" Background="{Binding IconTint}"
+                                  Opacity="{Binding IsOnline, Converter={x:Static vm:Converters.OnlineOpacity}}">
+                            <Path Classes="icon" Data="{Binding Icon}" Stroke="{Binding IconGlyph}" />
+                          </Border>
+                          <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Classes="h3" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="2" Margin="0,0,24,0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Classes="caption tertiary" Text="Primeira vez" FontSize="10.5" />
+                            <TextBlock Classes="caption" Text="{Binding FirstSeen}" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="7" Width="130" VerticalAlignment="Center">
+                            <Border Width="7" Height="7" CornerRadius="4" Background="{Binding StatusBrush}" VerticalAlignment="Center" />
+                            <TextBlock Classes="caption" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Classes="card" Margin="16,0,0,0" Padding="18">
+              <Grid RowDefinitions="Auto,*">
+                <TextBlock Classes="overline" Text="ATIVIDADE RECENTE" Margin="0,0,0,14" />
+                <ScrollViewer Grid.Row="1">
+                  <StackPanel>
+                    <TextBlock Classes="caption" Text="Ainda sem atividade registada." IsVisible="{Binding !HasHistory}" />
+                    <ItemsControl ItemsSource="{Binding RecentEvents}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:HistoryEventViewModel">
+                          <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,14">
+                            <Border Width="30" Height="30" CornerRadius="9" Background="{StaticResource SurfaceStrongBrush}" VerticalAlignment="Top">
+                              <Path Classes="icon sm" Data="{Binding Icon}" Stroke="{Binding Brush}" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="2">
+                              <TextBlock Text="{Binding TitleWithDevice}" TextWrapping="Wrap" />
+                              <TextBlock Classes="caption"><Run Text="{Binding When}" /><Run Text="  ·  " /><Run Text="{Binding Relative}" /></TextBlock>
+                            </StackPanel>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </ScrollViewer>
+              </Grid>
+            </Border>
+          </Grid>
+
+          <!-- ============ Monitorizados -->
+          <ScrollViewer IsVisible="{Binding IsWatchlistPage}" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="32,0,28,24">
+              <ItemsControl ItemsSource="{Binding WatchItems}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WatchItemViewModel">
+                    <Border Classes="card" Width="330" Margin="0,0,14,14">
+                      <StackPanel Spacing="14">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                          <Border Width="40" Height="40" CornerRadius="12" Background="#1AFBBF24">
+                            <Path Classes="icon lg" Data="{StaticResource Icon.Star}" Stroke="{StaticResource WarningBrush}" Fill="{StaticResource WarningBrush}" />
+                          </Border>
+                          <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Classes="h3" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="caption mono" Text="{Binding Details}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <Button Grid.Column="2" Classes="flat icon" Width="30" Height="30" ToolTip.Tip="Deixar de vigiar"
+                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RemoveWatchCommand}" CommandParameter="{Binding}">
+                            <Path Classes="icon sm" Data="{StaticResource Icon.Close}" />
+                          </Button>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                          <Border Width="7" Height="7" CornerRadius="4" Background="{Binding StatusBrush}" VerticalAlignment="Center" />
+                          <TextBlock Classes="caption" Text="{Binding StatusText}" />
+                          <TextBlock Classes="caption tertiary" Text="·" />
+                          <TextBlock Classes="caption" Text="{Binding Since}" />
+                        </StackPanel>
+                        <Border Classes="divider" />
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                          <TextBlock Text="Avisar quando entra" VerticalAlignment="Center" />
+                          <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyOnEnter}" />
+                          <TextBlock Grid.Row="1" Text="Avisar quando sai" VerticalAlignment="Center" />
+                          <ToggleSwitch Grid.Row="1" Grid.Column="1" IsChecked="{Binding NotifyOnLeave}" />
+                        </Grid>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,80,0,0" IsVisible="{Binding !HasWatchItems}">
+                <Border Width="64" Height="64" CornerRadius="20" Background="#1AFBBF24" HorizontalAlignment="Center">
+                  <Path Classes="icon xl" Data="{StaticResource Icon.Star}" Stroke="{StaticResource WarningBrush}" />
+                </Border>
+                <TextBlock Classes="h2" Text="Ainda não vigias nenhum dispositivo" HorizontalAlignment="Center" />
+                <TextBlock Classes="caption" Text="Toca na estrela de um dispositivo para receberes um aviso quando ele entra ou sai da rede." HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="420" TextAlignment="Center" />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </Panel>
+      </Grid>
+    </Grid>
+
+    <!-- ======================================================== Notificações -->
+    <ItemsControl ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,24" Width="340">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ToastViewModel">
+          <Border Classes="panel toast" Padding="14,12" Margin="0,8,0,0" CornerRadius="14">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Border Width="30" Height="30" CornerRadius="9" Background="{StaticResource SurfaceStrongBrush}" VerticalAlignment="Top">
+                <Path Classes="icon sm" Data="{Binding Icon}" Stroke="{Binding Brush}" />
+              </Border>
+              <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Classes="h3" Text="{Binding Title}" TextWrapping="Wrap" />
+                <TextBlock Classes="caption" Text="{Binding Message}" TextWrapping="Wrap" IsVisible="{Binding HasMessage}" />
+              </StackPanel>
+              <Button Grid.Column="2" Classes="flat icon" Width="26" Height="26" VerticalAlignment="Top"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DismissToastCommand}" CommandParameter="{Binding}">
+                <Path Classes="icon sm" Data="{StaticResource Icon.Close}" Width="10" Height="10" />
+              </Button>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </Panel>
+</Window>
