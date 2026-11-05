@@ -1,0 +1,302 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Nodar.Core.Models;
+
+namespace Nodar.Core.Monitoring;
+
+/// <summary>
+/// Histórico de presença dos dispositivos e lista de monitorização, com persistência em disco.
+/// </summary>
+/// <remarks>
+/// <list type="bullet">
+/// <item>Os dispositivos são identificados pelo MAC (o IP muda com o DHCP); sem MAC, pelo IP.</item>
+/// <item>"Novo" significa nunca visto antes. No primeiro scan de sempre nada é marcado como novo
+/// (é a linha de base da rede).</item>
+/// <item>Um dispositivo só é dado como saído depois de falhar <see cref="MissedScansBeforeLeft"/> scans
+/// seguidos: telemóveis em repouso falham respostas pontualmente e geravam alertas falsos.</item>
+/// </list>
+/// </remarks>
+public sealed class DeviceTracker
+{
+    public const int MissedScansBeforeLeft = 2;
+    public const string Online = "Online";
+    public const string Offline = "Offline";
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly Regex MacRegex = new("^([0-9A-F]{2}:){5}[0-9A-F]{2}$", RegexOptions.Compiled);
+
+    private readonly string _historyPath;
+    private readonly string _watchlistPath;
+    private readonly Func<DateTime> _now;
+    private readonly Dictionary<string, DeviceHistoryEntry> _history = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<WatchedDevice> _watchlist = [];
+
+    public DeviceTracker(string dataDirectory, Func<DateTime>? clock = null)
+    {
+        DataDirectory = dataDirectory;
+        _historyPath = Path.Combine(dataDirectory, "history.json");
+        _watchlistPath = Path.Combine(dataDirectory, "watchlist.json");
+        _now = clock ?? (() => DateTime.Now);
+    }
+
+    public static string DefaultDataDirectory =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Nodar");
+
+    public string DataDirectory { get; }
+
+    public IReadOnlyCollection<DeviceHistoryEntry> History => _history.Values;
+    public IReadOnlyList<WatchedDevice> Watchlist => _watchlist;
+
+    /// <summary>Chave estável de um dispositivo: MAC normalizado ou, sem MAC, o IP.</summary>
+    public static string KeyFor(string? mac, string? ip)
+    {
+        var normalized = (mac ?? "").Trim().ToUpperInvariant().Replace('-', ':');
+        return MacRegex.IsMatch(normalized) ? normalized : "ip:" + (ip ?? "").Trim();
+    }
+
+    public static string KeyFor(DeviceInfo device) => KeyFor(device.MacAddress, device.IpAddress);
+    private static string KeyFor(DeviceHistoryEntry entry) => KeyFor(entry.MacAddress, entry.IpAddress);
+    private static string KeyFor(WatchedDevice watched) => KeyFor(watched.MacAddress, watched.IpAddress);
+
+    public DeviceHistoryEntry? GetHistory(DeviceInfo device) =>
+        _history.TryGetValue(KeyFor(device), out var entry) ? entry : null;
+
+    public WatchedDevice? FindWatched(string? mac, string? ip)
+    {
+        var key = KeyFor(mac, ip);
+        return _watchlist.FirstOrDefault(w => KeyFor(w) == key)
+               ?? _watchlist.FirstOrDefault(w => !string.IsNullOrEmpty(ip) &&
+                                                 string.Equals(w.IpAddress, ip, StringComparison.OrdinalIgnoreCase) &&
+                                                 !MacRegex.IsMatch((w.MacAddress ?? "").ToUpperInvariant()));
+    }
+
+    public WatchedDevice? FindWatched(DeviceInfo device) => FindWatched(device.MacAddress, device.IpAddress);
+
+    // ---------------------------------------------------------------- persistência
+
+    public void Load()
+    {
+        MigrateLegacyData();
+        _history.Clear();
+        _watchlist.Clear();
+
+        foreach (var entry in ReadJson<List<DeviceHistoryEntry>>(_historyPath) ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(entry.IpAddress) && string.IsNullOrWhiteSpace(entry.MacAddress))
+                continue;
+            entry.FirstSeenAt ??= entry.Events.Count > 0 ? entry.Events.Min(e => e.Timestamp) : entry.SeenAt;
+
+            // Ficheiros antigos eram indexados por IP: juntar entradas do mesmo MAC.
+            var key = KeyFor(entry);
+            if (_history.TryGetValue(key, out var existing))
+            {
+                existing.Events.AddRange(entry.Events);
+                existing.Events.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+                if (entry.SeenAt > existing.SeenAt)
+                {
+                    existing.SeenAt = entry.SeenAt;
+                    existing.IpAddress = entry.IpAddress;
+                    existing.Status = entry.Status;
+                }
+                if (entry.FirstSeenAt < existing.FirstSeenAt)
+                    existing.FirstSeenAt = entry.FirstSeenAt;
+            }
+            else
+            {
+                _history[key] = entry;
+            }
+        }
+
+        _watchlist.AddRange(ReadJson<List<WatchedDevice>>(_watchlistPath) ?? []);
+    }
+
+    public void Save()
+    {
+        WriteJson(_historyPath, _history.Values.OrderBy(e => e.IpAddress, StringComparer.OrdinalIgnoreCase).ToList());
+        WriteJson(_watchlistPath, _watchlist);
+    }
+
+    // ---------------------------------------------------------------- scans
+
+    /// <summary>Aplica o resultado de um scan completo ao histórico e devolve o que mudou.</summary>
+    public TrackerUpdate ApplyScan(IReadOnlyList<DeviceInfo> devices)
+    {
+        var now = _now();
+        var isBaseline = _history.Count == 0;
+        var update = new TrackerUpdate();
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var device in devices)
+        {
+            var key = KeyFor(device);
+            if (!seenKeys.Add(key))
+                continue;
+
+            if (!_history.TryGetValue(key, out var entry))
+            {
+                entry = new DeviceHistoryEntry { FirstSeenAt = now, Status = Online };
+                _history[key] = entry;
+                entry.Events.Add(new DeviceHistoryEvent { EventType = DeviceHistoryEventType.Seen, Timestamp = now, Status = Online });
+                if (!isBaseline)
+                    update.NewDevices.Add(device);
+                NotifyIfWatched(device, entering: true, update);
+            }
+            else if (entry.Status == Offline)
+            {
+                entry.Events.Add(new DeviceHistoryEvent { EventType = DeviceHistoryEventType.Seen, Timestamp = now, Status = Online });
+                NotifyIfWatched(device, entering: true, update);
+            }
+
+            entry.IpAddress = device.IpAddress;
+            entry.MacAddress = device.MacAddress;
+            if (!string.IsNullOrWhiteSpace(device.Hostname))
+                entry.Hostname = device.Hostname;
+            if (!string.IsNullOrWhiteSpace(device.Vendor) && device.Vendor != "Desconhecido")
+                entry.Vendor = device.Vendor;
+            entry.DeviceType = device.DeviceType;
+            entry.Status = Online;
+            entry.SeenAt = now;
+            entry.MissedScans = 0;
+        }
+
+        foreach (var (key, entry) in _history)
+        {
+            if (seenKeys.Contains(key) || entry.Status == Offline)
+                continue;
+
+            entry.MissedScans++;
+            if (entry.MissedScans < MissedScansBeforeLeft)
+                continue;
+
+            entry.Status = Offline;
+            entry.LastLeftAt = now;
+            entry.Events.Add(new DeviceHistoryEvent { EventType = DeviceHistoryEventType.Left, Timestamp = now, Status = Offline });
+
+            var watched = FindWatched(entry.MacAddress, entry.IpAddress);
+            if (watched is { NotifyOnLeave: true })
+                update.WatchedLeft.Add(new WatchedEvent(watched, entry.Hostname, entry.IpAddress));
+        }
+
+        Save();
+        return update;
+    }
+
+    private void NotifyIfWatched(DeviceInfo device, bool entering, TrackerUpdate update)
+    {
+        var watched = FindWatched(device);
+        if (watched is { NotifyOnEnter: true } && entering)
+            update.WatchedArrived.Add(new WatchedEvent(watched, device.DisplayName, device.IpAddress));
+    }
+
+    /// <summary>Dispositivos conhecidos que não estão online (para a vista "mostrar offline").</summary>
+    public IEnumerable<DeviceHistoryEntry> OfflineEntries() =>
+        _history.Values.Where(e => e.Status == Offline).OrderByDescending(e => e.LastLeftAt ?? e.SeenAt);
+
+    // ---------------------------------------------------------------- monitorização
+
+    public WatchedDevice Watch(DeviceInfo device, string? name = null, bool notifyOnEnter = true, bool notifyOnLeave = true)
+    {
+        var existing = FindWatched(device);
+        if (existing != null)
+        {
+            existing.Name = string.IsNullOrWhiteSpace(name) ? existing.Name : name.Trim();
+            existing.NotifyOnEnter = notifyOnEnter;
+            existing.NotifyOnLeave = notifyOnLeave;
+            Save();
+            return existing;
+        }
+
+        var watched = new WatchedDevice
+        {
+            IpAddress = device.IpAddress,
+            MacAddress = device.MacAddress,
+            Name = string.IsNullOrWhiteSpace(name) ? device.DisplayName : name.Trim(),
+            NotifyOnEnter = notifyOnEnter,
+            NotifyOnLeave = notifyOnLeave,
+            AddedAt = _now()
+        };
+        _watchlist.Add(watched);
+        Save();
+        return watched;
+    }
+
+    public bool Unwatch(WatchedDevice watched)
+    {
+        var removed = _watchlist.Remove(watched);
+        if (removed)
+            Save();
+        return removed;
+    }
+
+    // ---------------------------------------------------------------- utilitários
+
+    /// <summary>
+    /// Copia o histórico e a lista de monitorização da versão "Network Watcher Pro", que os guardava numa
+    /// pasta dependente do nome do produto e da versão (%LOCALAPPDATA%\NetworkScanner\...\NetworkWatcherPro).
+    /// </summary>
+    private void MigrateLegacyData()
+    {
+        try
+        {
+            var legacyRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NetworkScanner");
+            if (!Directory.Exists(legacyRoot) || DataDirectory != DefaultDataDirectory)
+                return;
+
+            Directory.CreateDirectory(DataDirectory);
+            foreach (var fileName in new[] { "history.json", "watchlist.json" })
+            {
+                var target = Path.Combine(DataDirectory, fileName);
+                if (File.Exists(target))
+                    continue;
+
+                var newest = Directory.EnumerateFiles(legacyRoot, fileName, SearchOption.AllDirectories)
+                    .Where(f => Path.GetFileName(Path.GetDirectoryName(f)) == "NetworkWatcherPro")
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .FirstOrDefault();
+                if (newest != null)
+                    File.Copy(newest, target);
+            }
+        }
+        catch
+        {
+            // Migração opcional.
+        }
+    }
+
+    private static T? ReadJson<T>(string path)
+    {
+        try
+        {
+            return File.Exists(path) ? JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) : default;
+        }
+        catch
+        {
+            return default; // ficheiro corrompido: começa vazio em vez de impedir o arranque
+        }
+    }
+
+    private static void WriteJson<T>(string path, T value)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var temp = path + ".tmp";
+            File.WriteAllText(temp, JsonSerializer.Serialize(value, JsonOptions));
+            File.Move(temp, path, overwrite: true);
+        }
+        catch
+        {
+            // Falhar a gravação não deve interromper o scan.
+        }
+    }
+}
+
+public sealed record WatchedEvent(WatchedDevice Watched, string DeviceName, string IpAddress);
+
+public sealed class TrackerUpdate
+{
+    /// <summary>Dispositivos que nunca tinham sido vistos.</summary>
+    public List<DeviceInfo> NewDevices { get; } = [];
+    public List<WatchedEvent> WatchedArrived { get; } = [];
+    public List<WatchedEvent> WatchedLeft { get; } = [];
+}

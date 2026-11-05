@@ -151,8 +151,13 @@ public sealed class DeviceHistoryEntry
     public string Vendor { get; set; } = "";
     public string DeviceType { get; set; } = "Dispositivo";
     public string Status { get; set; } = "Online";
+    /// <summary>Última vez visto online.</summary>
     public DateTime SeenAt { get; set; } = DateTime.Now;
+    /// <summary>Primeira vez que o dispositivo foi visto na rede.</summary>
+    public DateTime? FirstSeenAt { get; set; }
     public DateTime? LastLeftAt { get; set; }
+    /// <summary>Scans consecutivos em que não apareceu (para não o dar como saído por uma falha pontual).</summary>
+    public int MissedScans { get; set; }
     public List<DeviceHistoryEvent> Events { get; set; } = [];
 }
 
