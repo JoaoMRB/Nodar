@@ -449,7 +449,7 @@
 
                     <!-- Informação -->
                     <Border Classes="card" Padding="16,6">
-                      <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                      <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <Grid.Styles>
                           <Style Selector="TextBlock.k"><Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" /><Setter Property="Margin" Value="0,9" /><Setter Property="FontSize" Value="12" /></Style>
                           <Style Selector="SelectableTextBlock.v"><Setter Property="Margin" Value="0,9" /><Setter Property="FontSize" Value="12.5" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
@@ -462,12 +462,14 @@
                         <SelectableTextBlock Grid.Row="2" Grid.Column="1" Classes="v" Text="{Binding Hostname}" />
                         <TextBlock Grid.Row="3" Classes="k" Text="Fabricante" />
                         <SelectableTextBlock Grid.Row="3" Grid.Column="1" Classes="v" Text="{Binding Vendor}" />
-                        <TextBlock Grid.Row="4" Classes="k" Text="Sistema" />
-                        <SelectableTextBlock Grid.Row="4" Grid.Column="1" Classes="v" Text="{Binding OperatingSystem}" />
-                        <TextBlock Grid.Row="5" Classes="k" Text="Visto pela 1.ª vez" />
-                        <SelectableTextBlock Grid.Row="5" Grid.Column="1" Classes="v" Text="{Binding FirstSeen}" />
-                        <TextBlock Grid.Row="6" Classes="k" Text="Última vez" />
-                        <SelectableTextBlock Grid.Row="6" Grid.Column="1" Classes="v" Text="{Binding LastSeen}" />
+                        <TextBlock Grid.Row="4" Classes="k" Text="Modelo" />
+                        <SelectableTextBlock Grid.Row="4" Grid.Column="1" Classes="v" Text="{Binding Model}" />
+                        <TextBlock Grid.Row="5" Classes="k" Text="Sistema" />
+                        <SelectableTextBlock Grid.Row="5" Grid.Column="1" Classes="v" Text="{Binding OperatingSystem}" />
+                        <TextBlock Grid.Row="6" Classes="k" Text="Visto pela 1.ª vez" />
+                        <SelectableTextBlock Grid.Row="6" Grid.Column="1" Classes="v" Text="{Binding FirstSeen}" />
+                        <TextBlock Grid.Row="7" Classes="k" Text="Última vez" />
+                        <SelectableTextBlock Grid.Row="7" Grid.Column="1" Classes="v" Text="{Binding LastSeen}" />
                       </Grid>
                     </Border>
 

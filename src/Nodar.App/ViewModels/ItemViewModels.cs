@@ -39,6 +39,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     public string Key { get; }
 
     public string DisplayName =>
+        !string.IsNullOrWhiteSpace(Device.FriendlyName) ? Device.FriendlyName :
         IsGateway && string.IsNullOrWhiteSpace(Device.Hostname) ? "Router" :
         !string.IsNullOrWhiteSpace(Device.Hostname) ? TrimDomain(Device.Hostname) :
         !string.IsNullOrWhiteSpace(Device.Vendor) && Device.Vendor != "Desconhecido" ? Device.Vendor :
@@ -48,8 +49,11 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     public string MacAddress => string.IsNullOrWhiteSpace(Device.MacAddress) ? "—" : Device.MacAddress;
     public string Vendor => string.IsNullOrWhiteSpace(Device.Vendor) || Device.Vendor == "Router/Gateway" ? "Desconhecido" : Device.Vendor;
     public string TypeLabel => IsGateway ? "Router" : Device.IsLocalDevice ? "Este computador" : Device.DeviceType;
-    public string Subtitle => $"{Device.IpAddress}  ·  {(Vendor == "Desconhecido" ? TypeLabel : Vendor)}";
+    public string Subtitle => $"{Device.IpAddress}  ·  {(!string.IsNullOrWhiteSpace(Device.Model) ? Device.Model : Vendor == "Desconhecido" ? TypeLabel : Vendor)}";
     public string Hostname => string.IsNullOrWhiteSpace(Device.Hostname) ? "—" : Device.Hostname;
+    public string Model => string.IsNullOrWhiteSpace(Device.Model) ? "—"
+        : !string.IsNullOrWhiteSpace(Device.ModelId) && Device.ModelId != Device.Model ? $"{Device.Model} ({Device.ModelId})"
+        : Device.Model;
     public string OperatingSystem => string.IsNullOrWhiteSpace(Device.OperatingSystem)
         ? "—"
         : $"{Device.OperatingSystem} · confiança {Device.OSConfidence.ToLowerInvariant()}";
@@ -99,7 +103,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
 
     public bool Matches(string filter) =>
         string.IsNullOrWhiteSpace(filter) ||
-        new[] { DisplayName, Device.IpAddress, Device.MacAddress, Device.Vendor, Device.Hostname, TypeLabel, Device.OperatingSystem }
+        new[] { DisplayName, Device.IpAddress, Device.MacAddress, Device.Vendor, Device.Hostname, TypeLabel, Device.OperatingSystem, Device.Model, Device.FriendlyName }
             .Any(s => s?.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase) == true);
 
     private static string TrimDomain(string host)

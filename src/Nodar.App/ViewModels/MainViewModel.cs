@@ -500,6 +500,8 @@ public sealed partial class MainViewModel : ObservableObject
         IpAddress = e.IpAddress,
         MacAddress = e.MacAddress,
         Hostname = e.Hostname,
+        FriendlyName = e.FriendlyName,
+        Model = e.Model,
         Vendor = e.Vendor,
         DeviceType = e.DeviceType,
         Status = DeviceTracker.Offline,
@@ -585,6 +587,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     private static string NameFor(DeviceHistoryEntry h) =>
+        !string.IsNullOrWhiteSpace(h.FriendlyName) ? h.FriendlyName :
         !string.IsNullOrWhiteSpace(h.Hostname) ? h.Hostname.Split('.')[0] :
         !string.IsNullOrWhiteSpace(h.Vendor) && h.Vendor != "Desconhecido" ? h.Vendor : h.IpAddress;
 
