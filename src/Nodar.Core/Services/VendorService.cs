@@ -803,7 +803,23 @@ public static class VendorService
 
     public static string GetDeviceType(string vendor, string hostname)
     {
+        vendor ??= "";
+        hostname ??= "";
         var text = $"{vendor} {hostname}".ToLowerInvariant();
+        var host = hostname.ToLowerInvariant();
+
+        // Pistas fortes no hostname (o fabricante por OUI falha muitas vezes, sobretudo com MACs aleatórios).
+        if (ContainsAny(host, "googletv", "chromecast", "androidtv", "bravia", "roku", "firetv", "appletv", "smarttv", "-tv", "tv-", "webos", "tizen"))
+            return "TV";
+        if (ContainsAny(text, "epson", "brother", "canon", "printer", "laserjet", "officejet", "deskjet", "kyocera", "lexmark", "xerox")
+            || host.StartsWith("hp") || host.StartsWith("npi"))
+            return "Impressora";
+        if (ContainsAny(host, "iphone", "ipad", "android", "galaxy", "pixel", "redmi", "xiaomi", "huawei", "oneplus", "phone"))
+            return host.Contains("iphone") || host.Contains("ipad") ? "Apple" : "Telemóvel";
+        if (ContainsAny(host, "playstation", "ps4", "ps5", "xbox", "nintendo", "switch"))
+            return "Consola";
+        if (ContainsAny(host, "camera", "cam-", "ipcam", "hikvision", "dahua", "reolink", "ring-"))
+            return "Câmara";
 
         if (vendor.Equals("Apple", StringComparison.OrdinalIgnoreCase)
             || text.Contains("apple")
@@ -835,6 +851,9 @@ public static class VendorService
 
         return "Dispositivo";
     }
+
+    private static bool ContainsAny(string text, params string[] needles) =>
+        needles.Any(n => text.Contains(n, StringComparison.Ordinal));
 
     public static string NormalizeMac(string mac)
     {
