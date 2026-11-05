@@ -193,6 +193,7 @@ src/Nodar.Core/                      # Lógica, sem interface gráfica
     ├── TracerouteService.cs         # (em desenvolvimento)
     └── TimingTemplates.cs           # (em desenvolvimento)
 tests/Nodar.Tests/                   # Testes (xUnit), com respostas reais da NVD como fixtures
+tests/Nodar.App.Tests/               # Testes da interface (Avalonia headless, dados isolados)
 tools/IconGenerator/                 # Gera o ícone da app
 tools/Screenshots/                   # Gera os screenshots do README (headless, modo demonstração)
 docs/screenshots/                    # Screenshots do README
@@ -230,7 +231,7 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 - [x] Ícone da aplicação
 - [x] Screenshots no README
 - [x] Interface, notificações e relatórios em português e inglês
-- [ ] Testes dos ViewModels da interface (o Core já tem 225 testes)
+- [ ] Mais testes da interface (já há testes headless da troca de idioma; o Core tem 225)
 
 ---
 

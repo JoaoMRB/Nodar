@@ -193,6 +193,7 @@ src/Nodar.Core/                      # Logic, no UI
     ├── TracerouteService.cs         # (in progress)
     └── TimingTemplates.cs           # (in progress)
 tests/Nodar.Tests/                   # Tests (xUnit), with real NVD responses as fixtures
+tests/Nodar.App.Tests/               # Interface tests (Avalonia headless, isolated data)
 tools/IconGenerator/                 # Generates the app icon
 tools/Screenshots/                   # Generates the README screenshots (headless, demo mode)
 docs/screenshots/                    # README screenshots (Portuguese; English in en/)
@@ -230,7 +231,7 @@ Local data (history, watchlist, preferences and vulnerability cache) lives in `%
 - [x] App icon
 - [x] README screenshots
 - [x] Interface, notifications and reports in English and Portuguese
-- [ ] Tests for the interface ViewModels (Core already has 225 tests)
+- [ ] More interface tests (headless language-switch tests exist; Core has 225)
 
 ---
 
