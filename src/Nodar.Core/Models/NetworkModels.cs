@@ -119,6 +119,9 @@ public sealed class ScanOptions
     public bool VulnerabilityScan { get; init; }
     public bool AdvancedPortScan { get; init; }
     public IProgress<ScanProgress>? Progress { get; init; }
+
+    /// <summary>Lista preliminar (IP, MAC, fabricante), reportada logo após a descoberta ARP.</summary>
+    public IProgress<IReadOnlyList<DeviceInfo>>? DevicesDiscovered { get; init; }
     public CancellationToken CancellationToken { get; init; }
     public Services.TimingTemplates.TimingLevel TimingLevel { get; init; } = Services.TimingTemplates.TimingLevel.Normal;
 }
@@ -158,6 +161,8 @@ public sealed class DeviceHistoryEntry
     public DateTime? LastLeftAt { get; set; }
     /// <summary>Scans consecutivos em que não apareceu (para não o dar como saído por uma falha pontual).</summary>
     public int MissedScans { get; set; }
+    /// <summary>O MAC é partilhado por vários IPs (repetidor Wi-Fi): o dispositivo é identificado por MAC+IP.</summary>
+    public bool SharedMac { get; set; }
     public List<DeviceHistoryEvent> Events { get; set; } = [];
 }
 

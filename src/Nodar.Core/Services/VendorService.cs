@@ -789,6 +789,9 @@ public static class VendorService
         ["00:1C:FF"] = "VMware"
     };
 
+    /// <summary>Fabricante mostrado para MACs privados (aleatórios), que não identificam o fabricante.</summary>
+    public const string PrivateAddressVendor = "Endereço privado";
+
     public static string Lookup(string mac)
     {
         if (string.IsNullOrWhiteSpace(mac))

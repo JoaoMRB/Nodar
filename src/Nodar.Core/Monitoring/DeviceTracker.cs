@@ -66,16 +66,31 @@ public sealed class DeviceTracker
     }
 
     public static string KeyFor(DeviceInfo device) => KeyFor(device.MacAddress, device.IpAddress);
-    private static string KeyFor(DeviceHistoryEntry entry) => KeyFor(entry.MacAddress, entry.IpAddress);
-    private static string KeyFor(WatchedDevice watched) => KeyFor(watched.MacAddress, watched.IpAddress);
+
+    /// <summary>
+    /// MACs vistos com vários IPs ao mesmo tempo. Acontece atrás de repetidores Wi-Fi que traduzem MACs
+    /// (todos os clientes do repetidor aparecem com o MAC dele): aí o MAC sozinho não identifica o dispositivo.
+    /// </summary>
+    private readonly HashSet<string> _sharedMacs = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Chave do dispositivo neste histórico: MAC, ou MAC@IP se o MAC for partilhado, ou o IP sem MAC.</summary>
+    public string Key(string? mac, string? ip)
+    {
+        var key = KeyFor(mac, ip);
+        return !key.StartsWith("ip:", StringComparison.Ordinal) && _sharedMacs.Contains(key) ? $"{key}@{ip}" : key;
+    }
+
+    public string Key(DeviceInfo device) => Key(device.MacAddress, device.IpAddress);
+    private string Key(DeviceHistoryEntry entry) => Key(entry.MacAddress, entry.IpAddress);
+    private string Key(WatchedDevice watched) => Key(watched.MacAddress, watched.IpAddress);
 
     public DeviceHistoryEntry? GetHistory(DeviceInfo device) =>
-        _history.TryGetValue(KeyFor(device), out var entry) ? entry : null;
+        _history.TryGetValue(Key(device), out var entry) ? entry : null;
 
     public WatchedDevice? FindWatched(string? mac, string? ip)
     {
-        var key = KeyFor(mac, ip);
-        return _watchlist.FirstOrDefault(w => KeyFor(w) == key)
+        var key = Key(mac, ip);
+        return _watchlist.FirstOrDefault(w => Key(w) == key)
                ?? _watchlist.FirstOrDefault(w => !string.IsNullOrEmpty(ip) &&
                                                  string.Equals(w.IpAddress, ip, StringComparison.OrdinalIgnoreCase) &&
                                                  !MacRegex.IsMatch((w.MacAddress ?? "").ToUpperInvariant()));
@@ -90,15 +105,20 @@ public sealed class DeviceTracker
         MigrateLegacyData();
         _history.Clear();
         _watchlist.Clear();
+        _sharedMacs.Clear();
 
-        foreach (var entry in ReadJson<List<DeviceHistoryEntry>>(_historyPath) ?? [])
+        var entries = ReadJson<List<DeviceHistoryEntry>>(_historyPath) ?? [];
+        foreach (var entry in entries.Where(e => e.SharedMac))
+            _sharedMacs.Add(KeyFor(entry.MacAddress, entry.IpAddress));
+
+        foreach (var entry in entries)
         {
             if (string.IsNullOrWhiteSpace(entry.IpAddress) && string.IsNullOrWhiteSpace(entry.MacAddress))
                 continue;
             entry.FirstSeenAt ??= entry.Events.Count > 0 ? entry.Events.Min(e => e.Timestamp) : entry.SeenAt;
 
             // Ficheiros antigos eram indexados por IP: juntar entradas do mesmo MAC.
-            var key = KeyFor(entry);
+            var key = Key(entry);
             if (_history.TryGetValue(key, out var existing))
             {
                 existing.Events.AddRange(entry.Events);
@@ -137,15 +157,22 @@ public sealed class DeviceTracker
         var update = new TrackerUpdate();
         var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        MarkSharedMacs(devices);
+
         foreach (var device in devices)
         {
-            var key = KeyFor(device);
+            var key = Key(device);
             if (!seenKeys.Add(key))
                 continue;
 
             if (!_history.TryGetValue(key, out var entry))
             {
-                entry = new DeviceHistoryEntry { FirstSeenAt = now, Status = Online };
+                entry = new DeviceHistoryEntry
+                {
+                    FirstSeenAt = now,
+                    Status = Online,
+                    SharedMac = _sharedMacs.Contains(KeyFor(device))
+                };
                 _history[key] = entry;
                 entry.Events.Add(new DeviceHistoryEvent { EventType = DeviceHistoryEventType.Seen, Timestamp = now, Status = Online });
                 if (!isBaseline)
@@ -190,6 +217,31 @@ public sealed class DeviceTracker
 
         Save();
         return update;
+    }
+
+    /// <summary>
+    /// Deteta MACs com vários IPs neste scan. A entrada antiga desse MAC (se existir) passa a ser do IP que
+    /// tinha, e cada IP fica com o seu histórico.
+    /// </summary>
+    private void MarkSharedMacs(IReadOnlyList<DeviceInfo> devices)
+    {
+        var shared = devices
+            .Select(d => (Mac: KeyFor(d.MacAddress, d.IpAddress), d.IpAddress))
+            .Where(x => !x.Mac.StartsWith("ip:", StringComparison.Ordinal))
+            .GroupBy(x => x.Mac, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Select(x => x.IpAddress).Distinct().Count() > 1)
+            .Select(g => g.Key);
+
+        foreach (var mac in shared)
+        {
+            if (!_sharedMacs.Add(mac))
+                continue;
+            if (_history.Remove(mac, out var existing))
+            {
+                existing.SharedMac = true;
+                _history[$"{mac}@{existing.IpAddress}"] = existing;
+            }
+        }
     }
 
     private void NotifyIfWatched(DeviceInfo device, bool entering, TrackerUpdate update)

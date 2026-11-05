@@ -84,62 +84,24 @@ public static class NetworkDiscoveryService
             };
         }
 
+        var rangeSize = NeighborDiscovery.HostRange(network.IpAddress, network.SubnetMask).Count;
         options.Progress?.Report(new ScanProgress
         {
             Percent = 5,
-            Message = "A ler tabela ARP...",
+            Message = $"A procurar dispositivos em {Math.Min(rangeSize, options.DeepScan ? int.MaxValue : NeighborDiscovery.FullSweepLimit)} endereços (ARP)...",
             DevicesFound = 0
         });
 
-        var arpTable = ParseArpTable();
-        var discovered = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // Presença decidida por ARP, sem exigir ping (iPhones, Macs e muitos outros ignoram ping).
+        var neighbors = await NeighborDiscovery.DiscoverAsync(network, options.DeepScan, options.CancellationToken);
+        var discovered = neighbors.Devices;
+        var method = neighbors.PartialSweep ? $"ARP ({neighbors.AddressesSwept} endereços mais próximos)" : "ARP";
 
-        var method = "ARP";
-
-        foreach (var (ip, mac) in arpTable)
+        if (!string.IsNullOrWhiteSpace(network.Gateway) && !discovered.ContainsKey(network.Gateway))
         {
-            if (!IsInNetwork(ip, network.IpAddress, network.SubnetMask))
-                continue;
-
-            if (ip == network.Gateway || ip == network.IpAddress || await ProbeHostAsync(ip, 180))
-                discovered[ip] = mac;
-        }
-
-        if (!string.IsNullOrWhiteSpace(network.Gateway))
-        {
-            discovered[network.Gateway] = ResolveMac(network.Gateway);
-        }
-
-        var hostRange = GetHostRange(network.IpAddress, network.SubnetMask);
-        var rangeSize = hostRange.Count;
-        var shouldSweep = options.DeepScan || rangeSize <= 256 || discovered.Count < 5;
-
-        if (shouldSweep)
-        {
-            options.Progress?.Report(new ScanProgress
-            {
-                Percent = 15,
-                Message = "A verificar hosts próximos...",
-                DevicesFound = discovered.Count
-            });
-
-            var aliveHosts = await FastPingSweepAsync(network, options);
-            method = discovered.Count > 0 ? "ARP + Ping" : "Ping";
-
-            foreach (var ip in aliveHosts)
-            {
-                if (!discovered.ContainsKey(ip))
-                    discovered[ip] = ResolveMac(ip);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(network.Gateway))
-        {
-            var gateway = network.Gateway;
-            if (!discovered.ContainsKey(gateway) && await PingHostAsync(gateway))
-            {
-                discovered[gateway] = ResolveMac(gateway);
-            }
+            var gatewayMac = ResolveMac(network.Gateway);
+            if (!string.IsNullOrEmpty(gatewayMac))
+                discovered[network.Gateway] = gatewayMac;
         }
 
         if (!discovered.ContainsKey(network.IpAddress))
@@ -147,90 +109,44 @@ public static class NetworkDiscoveryService
 
         var total = discovered.Count;
         var processed = 0;
-        var devices = new List<DeviceInfo>();
         var vulnerabilityService = options.VulnerabilityScan ? new Vulnerabilities.VulnerabilityService() : null;
 
-        foreach (var (ip, mac) in discovered.OrderBy(d => d.Key == network.Gateway ? 0 : 1).ThenBy(d => IpToUInt(d.Key)))
+        // Lista preliminar logo após a descoberta (a interface mostra-a enquanto os detalhes chegam).
+        options.DevicesDiscovered?.Report(discovered
+            .Select(d => BasicDevice(d.Key, d.Value, "", network))
+            .ToList());
+
+        options.Progress?.Report(new ScanProgress
         {
-            options.CancellationToken.ThrowIfCancellationRequested();
+            Percent = 30,
+            Message = $"{total} dispositivos encontrados · a identificar…",
+            DevicesFound = total
+        });
 
-            processed++;
-            var percent = 30 + (int)(processed / (double)Math.Max(total, 1) * 60);
-
-            options.Progress?.Report(new ScanProgress
+        // Vários dispositivos em paralelo: a maior parte do tempo é espera de rede (DNS, portas, banners).
+        var analyzed = new System.Collections.Concurrent.ConcurrentBag<DeviceInfo>();
+        await Parallel.ForEachAsync(
+            discovered.OrderBy(d => d.Key == network.Gateway ? 0 : 1).ThenBy(d => IpToUInt(d.Key)),
+            new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = options.CancellationToken },
+            async (pair, ct) =>
             {
-                Percent = percent,
-                Message = $"A analisar {ip}...",
-                DevicesFound = devices.Count
-            });
-
-            var hostname = await ResolveHostnameAsync(ip);
-            var vendor = VendorService.Lookup(mac);
-            var openPorts = "";
-            var operatingSystem = "";
-            var osConfidence = "";
-            var services = new List<Models.ServiceInfo>();
-            var vulnerabilities = new List<Models.VulnerabilityInfo>();
-
-            if (ip == network.Gateway)
-            {
-                vendor = string.IsNullOrWhiteSpace(vendor) || vendor == "Desconhecido"
-                    ? "Router/Gateway"
-                    : vendor;
-                if (string.IsNullOrWhiteSpace(hostname))
-                    hostname = "router";
-            }
-
-            // O gateway (router) também é analisado: é o dispositivo mais exposto da rede.
-            if (options.PortScan)
-            {
-                var ports = await ScanPortsAsync(ip, options.CancellationToken);
-                openPorts = ports.Count > 0 ? string.Join(", ", ports) : "";
-
-                // Service detection
-                if (options.ServiceDetection && ports.Count > 0)
+                analyzed.Add(await AnalyzeDeviceAsync(pair.Key, pair.Value, network, options, vulnerabilityService, ct));
+                var done = Interlocked.Increment(ref processed);
+                options.Progress?.Report(new ScanProgress
                 {
-                    services = await ServiceDetectionService.DetectServicesAsync(ip, ports, options.CancellationToken);
-                    
-                    // Vulnerability scanning
-                    if (vulnerabilityService != null)
-                    {
-                        options.Progress?.Report(new ScanProgress
-                        {
-                            Percent = percent,
-                            Message = $"A verificar vulnerabilidades em {ip} (NVD)...",
-                            DevicesFound = devices.Count
-                        });
-                        vulnerabilities = await vulnerabilityService.CheckAsync(services, options.CancellationToken);
-                    }
-                }
-            }
-
-            // OS Detection
-            if (options.OSDetection)
-            {
-                var osResult = await OSFingerprintService.DetectOSAsync(ip, options.CancellationToken);
-                operatingSystem = osResult.LikelyOS;
-                osConfidence = osResult.Confidence;
-            }
-
-            devices.Add(new DeviceInfo
-            {
-                IpAddress = ip,
-                MacAddress = string.IsNullOrEmpty(mac) ? "—" : VendorService.NormalizeMac(mac),
-                Hostname = hostname,
-                Vendor = vendor,
-                Status = "Online",
-                OpenPorts = openPorts,
-                IsLocalDevice = ip == network.IpAddress,
-                DeviceType = VendorService.GetDeviceType(vendor, hostname),
-                LastSeen = DateTime.Now,
-                OperatingSystem = operatingSystem,
-                OSConfidence = osConfidence,
-                Services = services,
-                Vulnerabilities = vulnerabilities
+                    Percent = 30 + (int)(done / (double)Math.Max(total, 1) * 65),
+                    Message = $"A identificar dispositivos ({done}/{total})…",
+                    DevicesFound = total
+                });
             });
-        }
+        var devices = analyzed.ToList();
+
+        // Entradas que vinham só da cache ARP e que o sistema entretanto deu como inalcançáveis: já saíram.
+        var gone = NeighborDiscovery.GoneSince(neighbors.Unconfirmed);
+        gone.Remove(network.Gateway);
+        gone.Remove(network.IpAddress);
+        if (gone.Count > 0)
+            devices.RemoveAll(d => gone.Contains(d.IpAddress));
 
         options.Progress?.Report(new ScanProgress
         {
@@ -250,6 +166,87 @@ public static class NetworkDiscoveryService
             ScanMethod = method,
             Duration = stopwatch.Elapsed,
             VulnerabilitySourceNote = vulnerabilityService?.BuildSourceNote()
+        };
+    }
+
+    private static string VendorFor(string mac, string ip, LocalNetworkInfo network)
+    {
+        var vendor = VendorService.Lookup(mac);
+        // iPhone, Android, Windows e macOS usam MACs privados (aleatórios) por rede Wi-Fi: não há fabricante.
+        if ((string.IsNullOrWhiteSpace(vendor) || vendor == "Desconhecido") && NeighborDiscovery.IsRandomizedMac(mac))
+            vendor = VendorService.PrivateAddressVendor;
+        if (ip == network.Gateway && (string.IsNullOrWhiteSpace(vendor) || vendor == "Desconhecido"))
+            vendor = "Router/Gateway";
+        return vendor;
+    }
+
+    private static DeviceInfo BasicDevice(string ip, string mac, string hostname, LocalNetworkInfo network)
+    {
+        var vendor = VendorFor(mac, ip, network);
+        return new DeviceInfo
+        {
+            IpAddress = ip,
+            MacAddress = string.IsNullOrEmpty(mac) ? "—" : VendorService.NormalizeMac(mac),
+            Hostname = hostname,
+            Vendor = vendor,
+            Status = "Online",
+            IsLocalDevice = ip == network.IpAddress,
+            DeviceType = VendorService.GetDeviceType(vendor, hostname),
+            LastSeen = DateTime.Now
+        };
+    }
+
+    private static async Task<DeviceInfo> AnalyzeDeviceAsync(
+        string ip, string mac, LocalNetworkInfo network, ScanOptions options,
+        Vulnerabilities.VulnerabilityService? vulnerabilityService, CancellationToken ct)
+    {
+        var hostname = await ResolveHostnameAsync(ip);
+        if (ip == network.Gateway && string.IsNullOrWhiteSpace(hostname))
+            hostname = "router";
+
+        var openPorts = "";
+        var services = new List<ServiceInfo>();
+        var vulnerabilities = new List<VulnerabilityInfo>();
+
+        // O gateway (router) também é analisado: é o dispositivo mais exposto da rede.
+        if (options.PortScan)
+        {
+            var ports = await ScanPortsAsync(ip, ct);
+            openPorts = ports.Count > 0 ? string.Join(", ", ports) : "";
+
+            if (options.ServiceDetection && ports.Count > 0)
+            {
+                services = await ServiceDetectionService.DetectServicesAsync(ip, ports, ct);
+                if (vulnerabilityService != null)
+                    vulnerabilities = await vulnerabilityService.CheckAsync(services, ct);
+            }
+        }
+
+        var operatingSystem = "";
+        var osConfidence = "";
+        if (options.OSDetection)
+        {
+            var osResult = await OSFingerprintService.DetectOSAsync(ip, ct);
+            operatingSystem = osResult.LikelyOS;
+            osConfidence = osResult.Confidence;
+        }
+
+        var basic = BasicDevice(ip, mac, hostname, network);
+        return new DeviceInfo
+        {
+            IpAddress = basic.IpAddress,
+            MacAddress = basic.MacAddress,
+            Hostname = basic.Hostname,
+            Vendor = basic.Vendor,
+            Status = basic.Status,
+            IsLocalDevice = basic.IsLocalDevice,
+            DeviceType = basic.DeviceType,
+            LastSeen = basic.LastSeen,
+            OpenPorts = openPorts,
+            OperatingSystem = operatingSystem,
+            OSConfidence = osConfidence,
+            Services = services,
+            Vulnerabilities = vulnerabilities
         };
     }
 
@@ -300,196 +297,6 @@ public static class NetworkDiscoveryService
         return count;
     }
 
-    private static bool IsInNetwork(string ip, string localIp, string mask)
-    {
-        try
-        {
-            var ipBytes = IPAddress.Parse(ip).GetAddressBytes();
-            var localBytes = IPAddress.Parse(localIp).GetAddressBytes();
-            var maskBytes = IPAddress.Parse(mask).GetAddressBytes();
-
-            for (var i = 0; i < 4; i++)
-            {
-                if ((ipBytes[i] & maskBytes[i]) != (localBytes[i] & maskBytes[i]))
-                    return false;
-            }
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static Dictionary<string, string> ParseArpTable()
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        try
-        {
-            var psi = new ProcessStartInfo("arp", "-a")
-            {
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            if (process == null) return result;
-
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-
-            var regex = new Regex(@"(\d+\.\d+\.\d+\.\d+)\s+([0-9a-fA-F\-]{17})", RegexOptions.Compiled);
-            foreach (Match match in regex.Matches(output))
-            {
-                var ip = match.Groups[1].Value;
-                var mac = VendorService.NormalizeMac(match.Groups[2].Value);
-
-                if (ip.StartsWith("224.") || ip.StartsWith("239.") || mac == "FF:FF:FF:FF:FF:FF")
-                    continue;
-
-                result[ip] = mac;
-            }
-        }
-        catch { }
-
-        return result;
-    }
-
-    private static async Task<List<string>> FastPingSweepAsync(LocalNetworkInfo network, ScanOptions options)
-    {
-        var hosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var gateway = network.Gateway;
-
-        foreach (var candidate in GetLikelyRouterCandidates(network))
-        {
-            if (!string.IsNullOrWhiteSpace(candidate))
-                hosts.Add(candidate);
-        }
-
-        if (!string.IsNullOrWhiteSpace(gateway))
-            hosts.Add(gateway);
-
-        var hostRange = GetHostRange(network.IpAddress, network.SubnetMask);
-        var rangeSize = hostRange.Count;
-
-        if (rangeSize <= 256)
-        {
-            foreach (var ip in hostRange)
-                hosts.Add(ip);
-        }
-        else
-        {
-            foreach (var ip in hostRange.Take(50))
-                hosts.Add(ip);
-
-            foreach (var ip in hostRange.Skip(Math.Max(0, rangeSize - 50)))
-                hosts.Add(ip);
-
-            var step = Math.Max(1, rangeSize / 20);
-            for (var i = 0; i < 20; i++)
-            {
-                var index = Math.Min(rangeSize - 1, i * step);
-                hosts.Add(hostRange[index]);
-            }
-
-            foreach (var candidate in GetLikelyRouterCandidates(network))
-                hosts.Add(candidate);
-        }
-
-        var alive = new System.Collections.Concurrent.ConcurrentBag<string>();
-
-        await Parallel.ForEachAsync(hosts.Where(h => !string.IsNullOrWhiteSpace(h)).Distinct(StringComparer.OrdinalIgnoreCase), new ParallelOptions
-        {
-            MaxDegreeOfParallelism = 16,
-            CancellationToken = options.CancellationToken
-        }, async (ip, ct) =>
-        {
-            if (await ProbeHostAsync(ip, 350))
-                alive.Add(ip);
-        });
-
-        return alive.OrderBy(IpToUInt).ToList();
-    }
-
-    private static async Task<bool> ProbeHostAsync(string ip, int timeout = 350)
-    {
-        var hasMac = !string.IsNullOrWhiteSpace(ResolveMac(ip));
-        var hasPing = await PingHostAsync(ip, timeout);
-        
-        return hasPing && hasMac;
-    }
-
-    private static List<string> GetLikelyRouterCandidates(LocalNetworkInfo network)
-    {
-        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        try
-        {
-            var gatewayBytes = IPAddress.Parse(network.Gateway).GetAddressBytes();
-            var lastOctet = gatewayBytes[3];
-
-            foreach (var octet in new[] { 1, 2, 10, 11, 20, 30, 50, 100, 200, 254 })
-            {
-                var bytes = gatewayBytes.ToArray();
-                bytes[3] = (byte)octet;
-                candidates.Add(new IPAddress(bytes).ToString());
-            }
-
-            if (lastOctet != 1)
-                candidates.Add(new IPAddress(new byte[] { gatewayBytes[0], gatewayBytes[1], gatewayBytes[2], 1 }).ToString());
-            if (lastOctet != 254)
-                candidates.Add(new IPAddress(new byte[] { gatewayBytes[0], gatewayBytes[1], gatewayBytes[2], 254 }).ToString());
-        }
-        catch
-        {
-            // Ignorar se o gateway não for válido.
-        }
-
-        return candidates.ToList();
-    }
-
-    private static List<string> GetHostRange(string ip, string mask)
-    {
-        var ipBytes = IPAddress.Parse(ip).GetAddressBytes();
-        var maskBytes = IPAddress.Parse(mask).GetAddressBytes();
-        var start = IpToUInt(ip) & IpToUInt(mask);
-        var end = start | ~IpToUInt(mask);
-        var hosts = new List<string>();
-
-        for (var addr = start + 1; addr < end; addr++)
-        {
-            var bytes = new byte[4];
-            bytes[0] = (byte)((addr >> 24) & 0xFF);
-            bytes[1] = (byte)((addr >> 16) & 0xFF);
-            bytes[2] = (byte)((addr >> 8) & 0xFF);
-            bytes[3] = (byte)(addr & 0xFF);
-            hosts.Add(new IPAddress(bytes).ToString());
-        }
-
-        return hosts;
-    }
-
-    private static async Task<bool> PingHostAsync(string ip, int timeout = 500)
-    {
-        try
-        {
-            using var ping = new Ping();
-            var reply = await ping.SendPingAsync(ip, timeout);
-            return reply.Status == IPStatus.Success;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static async Task<bool> IsHostActiveAsync(string ip, int timeout = 180)
-    {
-        return await ProbeHostAsync(ip, timeout);
-    }
-
     private static string ResolveMac(string ip)
     {
         try
@@ -510,7 +317,11 @@ public static class NetworkDiscoveryService
     {
         try
         {
-            var entry = await Dns.GetHostEntryAsync(ip);
+            // A resolução inversa no Windows pode esperar vários segundos por NetBIOS/LLMNR: limite de 2,5 s.
+            var lookup = Dns.GetHostEntryAsync(ip);
+            if (await Task.WhenAny(lookup, Task.Delay(2500)) != lookup)
+                return "";
+            var entry = await lookup;
             return entry.HostName != ip ? entry.HostName : "";
         }
         catch
