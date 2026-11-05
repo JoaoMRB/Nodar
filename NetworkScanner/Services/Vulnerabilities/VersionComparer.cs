@@ -20,7 +20,8 @@ public static class VersionComparer
 
     private static readonly HashSet<string> PreReleaseMarkers = new(StringComparer.OrdinalIgnoreCase)
     {
-        "alpha", "a", "beta", "b", "rc", "cr", "pre", "preview", "dev", "snapshot", "m", "milestone"
+        "alpha", "a", "beta", "b", "rc", "cr", "pre", "preview", "dev", "snapshot", "m", "milestone",
+        "test" // dnsmasq: 2.87test8 é anterior a 2.87
     };
 
     // "a"/"b" só contam como pré-lançamento quando seguidos de número (1.0a1, 1.0b2);

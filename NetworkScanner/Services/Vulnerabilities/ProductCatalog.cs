@@ -28,6 +28,10 @@ public static class ProductCatalog
         new("mysql", "MySQL", [("oracle", "mysql"), ("mysql", "mysql")]),
         new("mariadb", "MariaDB", [("mariadb", "mariadb")]),
         new("redis", "Redis", [("redis", "redis")]),
+        new("dnsmasq", "dnsmasq", [("thekelleys", "dnsmasq")]),
+        new("unbound", "Unbound", [("nlnetlabs", "unbound")]),
+        new("bind", "ISC BIND", [("isc", "bind")]),
+        new("miniupnpd", "MiniUPnPd", [("miniupnp_project", "miniupnpd")]),
     ];
 
     private static readonly Dictionary<string, Product> ByKey =

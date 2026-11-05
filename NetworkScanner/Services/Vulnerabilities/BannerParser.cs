@@ -36,12 +36,46 @@ public static class BannerParser
         if (string.IsNullOrWhiteSpace(banner))
             return null;
 
-        return ParseSsh(banner)
+        return ParseDns(banner)
+               ?? ParseSsh(banner)
                ?? ParseHttp(banner)
                ?? ParseFtp(banner)
                ?? ParseSmtp(banner)
                ?? ParseMySql(banner, port)
                ?? ParseRedis(banner);
+    }
+
+    // DNS (resposta a version.bind, ver DnsVersionProbe):
+    // "dnsmasq-2.80", "dnsmasq-pi-hole-v2.90", "unbound 1.13.1", "9.18.18-0ubuntu0.22.04.1-Ubuntu" (BIND)
+    private static ParsedBanner? ParseDns(string banner)
+    {
+        if (!banner.StartsWith(NetworkScanner.Services.DnsVersionProbe.BannerPrefix, StringComparison.Ordinal))
+            return null;
+
+        var value = banner[NetworkScanner.Services.DnsVersionProbe.BannerPrefix.Length..].Trim();
+
+        var dnsmasq = Regex.Match(value, @"^dnsmasq-(?<pihole>pi-hole-)?v?(?<v>\d+\.\d+(?:\.\d+)?(?:(?:test|rc)\d+)?)", Opts);
+        if (dnsmasq.Success)
+        {
+            var piHole = dnsmasq.Groups["pihole"].Success;
+            return new ParsedBanner("dnsmasq", piHole ? "dnsmasq (Pi-hole FTL)" : "dnsmasq",
+                dnsmasq.Groups["v"].Value, piHole, piHole ? "Pi-hole" : "");
+        }
+
+        var unbound = Regex.Match(value, @"^unbound (?<v>\d+\.\d+\.\d+)", Opts);
+        if (unbound.Success)
+            return new ParsedBanner("unbound", "Unbound", unbound.Groups["v"].Value, false, "");
+
+        // BIND: "9.16.1-Ubuntu", "9.11.4-P2-RedHat-9.11.4-26.P2.el7"
+        var bind = Regex.Match(value, @"^(?<v>9\.\d+\.\d+(?:-P\d+)?)(?<rest>.*)$", Opts);
+        if (bind.Success)
+        {
+            var (distro, name) = DetectDistro(bind.Groups["rest"].Value);
+            return new ParsedBanner("bind", "ISC BIND", bind.Groups["v"].Value, distro, name);
+        }
+
+        // Servidor respondeu mas esconde a versão (ex.: "none", "unknown", texto livre).
+        return new ParsedBanner("", "DNS", "", false, "");
     }
 
     // SSH: "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5", "SSH-2.0-dropbear_2022.83"
@@ -91,6 +125,11 @@ public static class BannerParser
 
         var value = server.Groups["s"].Value.Trim();
         var (distro, distroName) = DetectDistro(value);
+
+        // UPnP de routers: "Linux/4.14 UPnP/1.0 MiniUPnPd/2.2.1" (o produto não vem no início).
+        var miniupnpd = Regex.Match(value, @"\bMiniUPnPd/(?<v>\d+\.\d+(?:\.\d+)?)", Opts);
+        if (miniupnpd.Success)
+            return new ParsedBanner("miniupnpd", "MiniUPnPd", miniupnpd.Groups["v"].Value, false, "");
 
         (string Key, string Name, string Pattern)[] patterns =
         [

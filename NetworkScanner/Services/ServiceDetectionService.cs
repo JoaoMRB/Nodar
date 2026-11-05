@@ -66,7 +66,12 @@ public static class ServiceDetectionService
             // Try to get banner for version info (best effort)
             try
             {
-                var banner = await GrabBannerAsync(ip, port, ct);
+                // DNS: a versão obtém-se por consulta UDP (version.bind), não por banner TCP.
+                var banner = port == 53
+                    ? (await DnsVersionProbe.QueryAsync(ip, ct)) is { } dnsVersion
+                        ? DnsVersionProbe.BannerPrefix + dnsVersion
+                        : ""
+                    : await GrabBannerAsync(ip, port, ct);
                 if (!string.IsNullOrEmpty(banner))
                 {
                     serviceInfo.Banner = banner;
