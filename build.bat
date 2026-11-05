@@ -4,7 +4,7 @@ echo   Nodar - Build
 echo ============================================
 echo.
 
-dotnet publish NetworkScanner\NetworkScanner.csproj ^
+dotnet publish src\Nodar.App\Nodar.App.csproj ^
   -c Release ^
   -r win-x64 ^
   --self-contained true ^

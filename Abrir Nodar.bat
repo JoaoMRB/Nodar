@@ -10,7 +10,7 @@ if not exist "dist\Nodar.exe" (
         pause
         exit /b 1
     )
-    dotnet publish NetworkScanner\NetworkScanner.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o dist
+    dotnet publish src\Nodar.App\Nodar.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o dist
     if errorlevel 1 (
         echo.
         echo ERRO na compilacao.

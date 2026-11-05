@@ -18,7 +18,7 @@ cd /d "%~dp0"
 echo A iniciar a aplicacao Windows...
 echo Pressiona Ctrl+C para parar.
 echo.
-dotnet run --project NetworkScanner\NetworkScanner.csproj
+dotnet run --project src\Nodar.App\Nodar.App.csproj
 
 if %errorlevel% neq 0 (
     echo.
