@@ -1,4 +1,8 @@
-# Nodar
+<p align="center">
+  <img src="src/Nodar.App/Assets/nodar-128.png" width="96" alt="Nodar" />
+</p>
+
+<h1 align="center">Nodar</h1>
 
 > Descobre quem está ligado à tua rede local, identifica cada dispositivo e avisa-te quando aparece alguém novo.
 
@@ -192,7 +196,8 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 - [ ] Nomes personalizados e "dispositivos de confiança"
 - [x] Identificação por Bonjour/mDNS e registo de fabricantes do IEEE
 - [ ] Identificação por NetBIOS e SSDP/UPnP (Windows, Smart TVs, consolas)
-- [ ] Ícone da aplicação e screenshots no README
+- [x] Ícone da aplicação
+- [ ] Screenshots no README
 - [ ] Testes dos ViewModels da interface (o Core já tem 155 testes)
 
 ---

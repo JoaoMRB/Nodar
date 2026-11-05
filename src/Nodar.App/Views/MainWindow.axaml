@@ -4,6 +4,7 @@
         x:Class="Nodar.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Nodar"
+        Icon="/Assets/nodar.ico"
         Width="1320" Height="840" MinWidth="1080" MinHeight="660"
         WindowStartupLocation="CenterScreen"
         Background="Transparent"
