@@ -32,6 +32,8 @@ public static class ProductCatalog
         new("unbound", "Unbound", [("nlnetlabs", "unbound")]),
         new("bind", "ISC BIND", [("isc", "bind")]),
         new("miniupnpd", "MiniUPnPd", [("miniupnp_project", "miniupnpd")]),
+        // "Portable SDK for UPnP devices" (libupnp, hoje pupnp): muito usada em firmware de routers.
+        new("libupnp", "libupnp (Portable UPnP SDK)", [("libupnp_project", "libupnp"), ("pupnp_project", "pupnp")]),
     ];
 
     private static readonly Dictionary<string, Product> ByKey =

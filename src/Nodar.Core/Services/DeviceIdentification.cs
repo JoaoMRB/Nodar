@@ -10,6 +10,53 @@ public static class DeviceIdentification
 {
     public sealed record Description(string? FriendlyName, string? Model, string? Vendor, string? DeviceType);
 
+    /// <summary>
+    /// Combina as três fontes. Nome: mDNS → SSDP → NetBIOS. Fabricante e modelo: mDNS → SSDP (o fabricante do
+    /// descritor UPnP é mais fiável do que o do MAC, que muitas vezes é o do chip Wi-Fi).
+    /// </summary>
+    public static Description? Combine(MdnsProbe.Identity? mdns, SsdpProbe.Identity? ssdp, NetBiosProbe.Names? netbios)
+    {
+        var fromMdns = mdns != null ? Describe(mdns) : null;
+        var fromSsdp = ssdp != null ? Describe(ssdp) : null;
+        if (fromMdns == null && fromSsdp == null && string.IsNullOrWhiteSpace(netbios?.ComputerName))
+            return null;
+
+        return new Description(
+            fromMdns?.FriendlyName ?? fromSsdp?.FriendlyName ?? netbios?.ComputerName,
+            fromMdns?.Model ?? fromSsdp?.Model,
+            fromSsdp?.Vendor ?? fromMdns?.Vendor,
+            fromMdns?.DeviceType ?? fromSsdp?.DeviceType);
+    }
+
+    /// <summary>Descritor UPnP: "TP-Link Archer AX55" (InternetGatewayDevice) → modelo e tipo Router.</summary>
+    public static Description Describe(SsdpProbe.Identity ssdp)
+    {
+        var manufacturer = string.IsNullOrWhiteSpace(ssdp.Manufacturer) ? null : OuiRegistry.ShortName(ssdp.Manufacturer);
+        var model = ssdp.ModelName;
+        if (!string.IsNullOrWhiteSpace(model) && manufacturer != null && !model.StartsWith(manufacturer, StringComparison.OrdinalIgnoreCase))
+            model = $"{manufacturer} {model}";
+
+        // O friendlyName de muitos routers/TVs é só o modelo: aí não acrescenta nada como nome.
+        var friendly = ssdp.FriendlyName;
+        if (friendly != null && (model?.Contains(friendly, StringComparison.OrdinalIgnoreCase) == true
+                                 || friendly.Contains(ssdp.ModelName ?? "\u0000", StringComparison.OrdinalIgnoreCase)))
+            friendly = null;
+
+        var type = ssdp.DeviceType?.ToLowerInvariant() switch
+        {
+            null => null,
+            var t when t.Contains("internetgatewaydevice") || t.Contains("wfadevice") => "Router",
+            var t when t.Contains("mediarenderer") || t.Contains(":dial:") => "TV",
+            var t when t.Contains("printer") => "Impressora",
+            var t when t.Contains("mediaserver") => "Servidor",
+            _ => null
+        };
+        if (type == null && ssdp.Server?.Contains("Chromecast", StringComparison.OrdinalIgnoreCase) == true)
+            type = "TV";
+
+        return new Description(friendly, model, manufacturer, type);
+    }
+
     public static Description Describe(MdnsProbe.Identity identity)
     {
         var (model, vendor, type) = FromModelId(identity.ModelId);

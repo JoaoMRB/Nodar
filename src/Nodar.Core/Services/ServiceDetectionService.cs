@@ -73,18 +73,7 @@ public static class ServiceDetectionService
                         : ""
                     : await GrabBannerAsync(ip, port, ct);
                 if (!string.IsNullOrEmpty(banner))
-                {
-                    serviceInfo.Banner = banner;
-                    var parsed = BannerParser.Parse(banner, port);
-                    if (parsed != null)
-                    {
-                        serviceInfo.ProductKey = parsed.ProductKey;
-                        serviceInfo.Product = parsed.ProductName;
-                        serviceInfo.Version = parsed.Version;
-                        serviceInfo.IsDistroPackage = parsed.IsDistroPackage;
-                        serviceInfo.DistroName = parsed.DistroName;
-                    }
-                }
+                    serviceInfo = FromBanner(port, serviceName, banner);
             }
             catch
             {
@@ -97,6 +86,22 @@ public static class ServiceDetectionService
         return services;
     }
 
+
+    /// <summary>Serviço a partir de um banner já obtido (TCP, DNS version.bind, cabeçalho SSDP…).</summary>
+    public static Models.ServiceInfo FromBanner(int port, string serviceName, string banner)
+    {
+        var service = new Models.ServiceInfo { Port = port, Service = serviceName, Banner = banner };
+        var parsed = BannerParser.Parse(banner, port);
+        if (parsed != null)
+        {
+            service.ProductKey = parsed.ProductKey;
+            service.Product = parsed.ProductName;
+            service.Version = parsed.Version;
+            service.IsDistroPackage = parsed.IsDistroPackage;
+            service.DistroName = parsed.DistroName;
+        }
+        return service;
+    }
 
     /// <summary>Opções da leitura de banners (configuráveis para testes).</summary>
     public sealed record BannerGrabOptions

@@ -48,3 +48,20 @@ public class AppSettingsAndTypeTests
     public void Device_type_uses_hostname_hints(string vendor, string host, string expected) =>
         Assert.Equal(expected, VendorService.GetDeviceType(vendor, host));
 }
+
+public class PhoneHostnameTests
+{
+    [Theory]
+    [InlineData("S24-Ultra-do-Tiago.home")]
+    [InlineData("Galaxy-A54.home")]
+    [InlineData("A54-de-Ana.lan")]
+    [InlineData("Z-Fold6.home")]
+    public void Samsung_phone_hostnames_are_phones(string host) =>
+        Assert.Equal("Telemóvel", Nodar.Core.Services.VendorService.GetDeviceType("Endereço privado", host));
+
+    [Theory]
+    [InlineData("server01")]
+    [InlineData("a1b2c3")]
+    public void Other_names_are_not_phones(string host) =>
+        Assert.NotEqual("Telemóvel", Nodar.Core.Services.VendorService.GetDeviceType("Desconhecido", host));
+}

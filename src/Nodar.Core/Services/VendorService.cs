@@ -822,7 +822,8 @@ public static class VendorService
         if (ContainsAny(text, "epson", "brother", "canon", "printer", "laserjet", "officejet", "deskjet", "kyocera", "lexmark", "xerox")
             || host.StartsWith("hp") || host.StartsWith("npi"))
             return "Impressora";
-        if (ContainsAny(host, "iphone", "ipad", "android", "galaxy", "pixel", "redmi", "xiaomi", "huawei", "oneplus", "phone"))
+        if (ContainsAny(host, "iphone", "ipad", "android", "galaxy", "pixel", "redmi", "xiaomi", "huawei", "oneplus", "phone", "-ultra", "fold", "flip")
+            || System.Text.RegularExpressions.Regex.IsMatch(host, @"^(s|a|m|z)\d{2}(\b|[-_ ])")) // Samsung: S26, A54, Z…
             return host.Contains("iphone") || host.Contains("ipad") ? "Apple" : "Telemóvel";
         if (ContainsAny(host, "playstation", "ps4", "ps5", "xbox", "nintendo", "switch"))
             return "Consola";

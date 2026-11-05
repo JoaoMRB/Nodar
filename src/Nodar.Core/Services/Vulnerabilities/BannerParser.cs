@@ -37,6 +37,7 @@ public static class BannerParser
             return null;
 
         return ParseDns(banner)
+               ?? ParseSsdp(banner)
                ?? ParseSsh(banner)
                ?? ParseHttp(banner)
                ?? ParseFtp(banner)
@@ -76,6 +77,27 @@ public static class BannerParser
 
         // Servidor respondeu mas esconde a versão (ex.: "none", "unknown", texto livre):
         // nenhum produto identificado.
+        return new ParsedBanner("", "", "", false, "");
+    }
+
+    /// <summary>Prefixo do "banner" de UPnP: o cabeçalho SERVER das respostas SSDP.</summary>
+    public const string SsdpPrefix = "SSDP SERVER: ";
+
+    // SSDP: "Linux/4.19, UPnP/1.0, Portable SDK for UPnP devices/1.6.21", "Linux/3.4 UPnP/1.0 MiniUPnPd/2.1"
+    private static ParsedBanner? ParseSsdp(string banner)
+    {
+        if (!banner.StartsWith(SsdpPrefix, StringComparison.Ordinal))
+            return null;
+        var value = banner[SsdpPrefix.Length..];
+
+        var libupnp = Regex.Match(value, @"Portable SDK for UPnP devices/(?<v>\d+\.\d+\.\d+)", Opts);
+        if (libupnp.Success)
+            return new ParsedBanner("libupnp", "libupnp (Portable UPnP SDK)", libupnp.Groups["v"].Value, false, "");
+
+        var miniupnpd = Regex.Match(value, @"\bMiniUPnPd/(?<v>\d+\.\d+(?:\.\d+)?)", Opts);
+        if (miniupnpd.Success)
+            return new ParsedBanner("miniupnpd", "MiniUPnPd", miniupnpd.Groups["v"].Value, false, "");
+
         return new ParsedBanner("", "", "", false, "");
     }
 

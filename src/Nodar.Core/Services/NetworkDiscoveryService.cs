@@ -116,13 +116,21 @@ public static class NetworkDiscoveryService
 
         // Bonjour/mDNS: nome e modelo de Macs, iPhones, iPads, Chromecast, impressoras… (identifica
         // dispositivos com MAC privado, onde o fabricante não se sabe pelo MAC).
-        options.Progress?.Report(new ScanProgress { Percent = 20, Message = "A identificar por Bonjour (mDNS)…", DevicesFound = total });
-        var identities = await MdnsProbe.QueryAsync(discovered.Keys.ToList(), options.CancellationToken);
+        // SSDP/UPnP: TVs, boxes, consolas e routers (nome, fabricante, modelo). NetBIOS: nome de PCs Windows.
+        options.Progress?.Report(new ScanProgress { Percent = 20, Message = "A identificar dispositivos (Bonjour, UPnP, NetBIOS)…", DevicesFound = total });
+        var ipList = discovered.Keys.ToList();
+        var ipSet = ipList.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var mdnsTask = MdnsProbe.QueryAsync(ipList, options.CancellationToken);
+        var ssdpTask = SsdpProbe.QueryAsync(ipSet.Contains, options.CancellationToken);
+        var netbiosTask = NetBiosProbe.QueryAsync(ipList, options.CancellationToken);
+        await Task.WhenAll(mdnsTask, ssdpTask, netbiosTask);
         await ouiLoading;
+        var (mdns, ssdp, netbios) = (mdnsTask.Result, ssdpTask.Result, netbiosTask.Result);
+        Clues CluesFor(string ip) => new(mdns.GetValueOrDefault(ip), ssdp.GetValueOrDefault(ip), netbios.GetValueOrDefault(ip));
 
         // Lista preliminar logo após a descoberta (a interface mostra-a enquanto os detalhes chegam).
         options.DevicesDiscovered?.Report(discovered
-            .Select(d => BasicDevice(d.Key, d.Value, "", network, identities.GetValueOrDefault(d.Key)))
+            .Select(d => BasicDevice(d.Key, d.Value, "", network, CluesFor(d.Key)))
             .ToList());
 
         options.Progress?.Report(new ScanProgress
@@ -140,7 +148,7 @@ public static class NetworkDiscoveryService
             async (pair, ct) =>
             {
                 analyzed.Add(await AnalyzeDeviceAsync(pair.Key, pair.Value, network, options, vulnerabilityService,
-                    identities.GetValueOrDefault(pair.Key), ct));
+                    CluesFor(pair.Key), ct));
                 var done = Interlocked.Increment(ref processed);
                 options.Progress?.Report(new ScanProgress
                 {
@@ -190,19 +198,26 @@ public static class NetworkDiscoveryService
         return vendor;
     }
 
-    private static DeviceInfo BasicDevice(string ip, string mac, string hostname, LocalNetworkInfo network, MdnsProbe.Identity? identity)
+    /// <summary>O que os protocolos de identificação disseram sobre um IP.</summary>
+    private sealed record Clues(MdnsProbe.Identity? Mdns, SsdpProbe.Identity? Ssdp, NetBiosProbe.Names? NetBios);
+
+    private static DeviceInfo BasicDevice(string ip, string mac, string hostname, LocalNetworkInfo network, Clues clues)
     {
         var vendor = VendorFor(mac, ip, network);
-        var described = identity != null ? DeviceIdentification.Describe(identity) : null;
+        var identity = clues.Mdns;
+        var described = DeviceIdentification.Combine(clues.Mdns, clues.Ssdp, clues.NetBios);
 
         // Hostname: o do DNS do router, ou o .local do Bonjour se o do router não disser nada (ex.: o MAC).
         if (DeviceIdentification.IsMeaninglessHostname(hostname) && !string.IsNullOrWhiteSpace(identity?.Hostname)
             && !DeviceIdentification.IsMeaninglessHostname(identity.Hostname))
             hostname = identity.Hostname!;
+        if (DeviceIdentification.IsMeaninglessHostname(hostname) && !string.IsNullOrWhiteSpace(clues.NetBios?.ComputerName))
+            hostname = clues.NetBios.ComputerName!;
         if (DeviceIdentification.IsMeaninglessHostname(hostname))
             hostname = "";
 
-        if (!string.IsNullOrWhiteSpace(described?.Vendor) && (vendor is "" or "Desconhecido" || vendor == VendorService.PrivateAddressVendor))
+        // Fabricante anunciado (descritor UPnP, modelo Apple) é mais fiável do que o do MAC (muitas vezes o do chip Wi-Fi).
+        if (!string.IsNullOrWhiteSpace(described?.Vendor))
             vendor = described.Vendor!;
 
         return new DeviceInfo
@@ -224,7 +239,7 @@ public static class NetworkDiscoveryService
 
     private static async Task<DeviceInfo> AnalyzeDeviceAsync(
         string ip, string mac, LocalNetworkInfo network, ScanOptions options,
-        Vulnerabilities.VulnerabilityService? vulnerabilityService, MdnsProbe.Identity? identity, CancellationToken ct)
+        Vulnerabilities.VulnerabilityService? vulnerabilityService, Clues clues, CancellationToken ct)
     {
         var hostname = await ResolveHostnameAsync(ip);
         if (ip == network.Gateway && string.IsNullOrWhiteSpace(hostname))
@@ -241,12 +256,15 @@ public static class NetworkDiscoveryService
             openPorts = ports.Count > 0 ? string.Join(", ", ports) : "";
 
             if (options.ServiceDetection && ports.Count > 0)
-            {
                 services = await ServiceDetectionService.DetectServicesAsync(ip, ports, ct);
-                if (vulnerabilityService != null)
-                    vulnerabilities = await vulnerabilityService.CheckAsync(services, ct);
-            }
         }
+
+        // UPnP (SSDP, UDP 1900): o cabeçalho SERVER anuncia a pilha UPnP (ex.: libupnp 1.6.21 em routers).
+        if (options.ServiceDetection && !string.IsNullOrWhiteSpace(clues.Ssdp?.Server))
+            services.Add(ServiceDetectionService.FromBanner(1900, "UPnP (SSDP)", Vulnerabilities.BannerParser.SsdpPrefix + clues.Ssdp.Server));
+
+        if (vulnerabilityService != null && services.Count > 0)
+            vulnerabilities = await vulnerabilityService.CheckAsync(services, ct);
 
         var operatingSystem = "";
         var osConfidence = "";
@@ -257,7 +275,7 @@ public static class NetworkDiscoveryService
             osConfidence = osResult.Confidence;
         }
 
-        var basic = BasicDevice(ip, mac, hostname, network, identity);
+        var basic = BasicDevice(ip, mac, hostname, network, clues);
         return new DeviceInfo
         {
             IpAddress = basic.IpAddress,
