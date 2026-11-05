@@ -11,6 +11,18 @@ public static class AuditReportService
     /// </summary>
     private static string H(string? value) => System.Net.WebUtility.HtmlEncode(value ?? "");
 
+    private const string VulnerabilityDisclaimer =
+        "Correspondência pela versão anunciada no banner, com dados da NVD (NIST) e do catálogo CISA KEV. " +
+        "Não confirma que o dispositivo está vulnerável: configuração, módulos ativos e correções aplicadas " +
+        "pelo fabricante ou pela distribuição (backports) podem mudar o resultado.";
+
+    /// <summary>Texto seguro para uma célula de tabela Markdown (sem quebras de linha nem barras verticais).</summary>
+    private static string MdCell(string? value) =>
+        (value ?? "").Replace("\r", " ").Replace("\n", " ").Replace("|", "\\|");
+
+    private static string CvssText(VulnerabilityInfo v) =>
+        v.CvssScore.HasValue ? $"{v.CvssScore:0.0} (v{v.CvssVersion})" : "—";
+
     public class AuditReportOptions
     {
         public bool IncludeVulnerabilities { get; set; } = true;
@@ -106,9 +118,12 @@ public static class AuditReportService
         // Vulnerability Summary
         if (options.IncludeVulnerabilities && totalVulns > 0)
         {
-            sb.AppendLine("<h2>⚠️ Resumo de Vulnerabilidades</h2>");
+            sb.AppendLine("<h2>⚠️ Vulnerabilidades potenciais</h2>");
+            sb.AppendLine($"<p><em>{H(VulnerabilityDisclaimer)}</em></p>");
+            if (!string.IsNullOrEmpty(scanResult.VulnerabilitySourceNote))
+                sb.AppendLine($"<p><em>{H(scanResult.VulnerabilitySourceNote)}</em></p>");
             sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Dispositivo</th><th>Serviço</th><th>Severidade</th><th>CVE</th><th>Descrição</th></tr>");
+            sb.AppendLine("<tr><th>Dispositivo</th><th>Serviço</th><th>Severidade</th><th>CVSS</th><th>CVE</th><th>Explorada (KEV)</th><th>Descrição</th></tr>");
 
             foreach (var device in scanResult.Devices.Where(d => d.Vulnerabilities.Any()))
             {
@@ -122,11 +137,18 @@ public static class AuditReportService
                         _ => "severity-low"
                     };
 
+                    var kev = vuln.IsKnownExploited
+                        ? (vuln.KnownRansomwareUse ? "Sim (ransomware)" : "Sim")
+                        : "—";
+                    var backport = vuln.MayBeBackported ? " <small>(pacote de distribuição: confirmar)</small>" : "";
+
                     sb.AppendLine("<tr>");
                     sb.AppendLine($"<td>{H(device.DisplayName)} ({H(device.IpAddress)})</td>");
-                    sb.AppendLine($"<td>{H(vuln.Service)}</td>");
+                    sb.AppendLine($"<td>{H(vuln.Product)} {H(vuln.DetectedVersion)} · porta {vuln.Port}{backport}</td>");
                     sb.AppendLine($"<td class='{severityClass}'>{H(vuln.Severity)}</td>");
-                    sb.AppendLine($"<td>{H(vuln.CVE)}</td>");
+                    sb.AppendLine($"<td>{H(CvssText(vuln))}</td>");
+                    sb.AppendLine($"<td><a href='{H(vuln.Url)}'>{H(vuln.CVE)}</a></td>");
+                    sb.AppendLine($"<td>{H(kev)}</td>");
                     sb.AppendLine($"<td>{H(vuln.Description)}</td>");
                     sb.AppendLine("</tr>");
                 }
@@ -350,15 +372,24 @@ public static class AuditReportService
         // Vulnerabilities
         if (options.IncludeVulnerabilities && totalVulns > 0)
         {
-            sb.AppendLine("## ⚠️ Vulnerabilidades");
+            sb.AppendLine("## ⚠️ Vulnerabilidades potenciais");
             sb.AppendLine();
-            
-            foreach (var device in scanResult.Devices.Where(d => d.Vulnerabilities.Any()))
+            sb.AppendLine($"> {VulnerabilityDisclaimer}");
+            if (!string.IsNullOrEmpty(scanResult.VulnerabilitySourceNote))
+                sb.AppendLine($">\n> {scanResult.VulnerabilitySourceNote}");
+            sb.AppendLine();
+
+            foreach (var device in scanResult.Devices.Where(d => d.Vulnerabilities.Count > 0))
             {
                 sb.AppendLine($"### {device.DisplayName} ({device.IpAddress})");
+                sb.AppendLine();
+                sb.AppendLine("| CVE | Severidade | CVSS | KEV | Serviço | Descrição |");
+                sb.AppendLine("|-----|------------|------|-----|---------|-----------|");
                 foreach (var vuln in device.Vulnerabilities)
                 {
-                    sb.AppendLine($"- **{vuln.Service}** [{vuln.Severity}] {vuln.CVE}: {vuln.Description}");
+                    var kev = vuln.IsKnownExploited ? (vuln.KnownRansomwareUse ? "Sim (ransomware)" : "Sim") : "—";
+                    var service = $"{vuln.Product} {vuln.DetectedVersion} :{vuln.Port}" + (vuln.MayBeBackported ? " ⚠ distro" : "");
+                    sb.AppendLine($"| [{vuln.CVE}]({vuln.Url}) | {vuln.Severity} | {CvssText(vuln)} | {kev} | {MdCell(service)} | {MdCell(vuln.Description)} |");
                 }
                 sb.AppendLine();
             }
@@ -397,7 +428,8 @@ public static class AuditReportService
                 sb.AppendLine($"- **Vulnerabilidades:** {device.Vulnerabilities.Count}");
                 foreach (var vuln in device.Vulnerabilities)
                 {
-                    sb.AppendLine($"  - [{vuln.Severity}] {vuln.CVE}: {vuln.Description}");
+                    var kev = vuln.IsKnownExploited ? " · explorada (KEV)" : "";
+                    sb.AppendLine($"  - [{vuln.Severity} {CvssText(vuln)}] {vuln.CVE}{kev}");
                 }
             }
 

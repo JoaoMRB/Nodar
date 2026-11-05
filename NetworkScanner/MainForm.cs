@@ -49,6 +49,7 @@ public sealed class MainForm : Form
     private HashSet<string> _knownDevices = [];
     private bool _isScanning;
     private List<DeviceInfo> _lastDevices = [];
+    private string? _lastVulnerabilityNote;
     private readonly Dictionary<string, DeviceHistoryEntry> _history = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<WatchedDevice> _watchedDevices = [];
     private readonly string _watchlistFilePath;
@@ -714,8 +715,14 @@ public sealed class MainForm : Form
             DisplayDevices(result);
             DetectNewDevices(result.Devices);
 
-            _statusLabel.Text = $"Análise concluída em {result.Duration.TotalSeconds:F1}s · Método: {result.ScanMethod}";
-            _statusLabel.ForeColor = Theme.Success;
+            _lastVulnerabilityNote = result.VulnerabilitySourceNote;
+            var vulnSourceProblem = result.Devices
+                .SelectMany(d => d.Services)
+                .Any(s => s.VulnerabilityCheck is VulnerabilityCheckStatus.SourceUnavailable or VulnerabilityCheckStatus.CheckedWithStaleData);
+
+            _statusLabel.Text = $"Análise concluída em {result.Duration.TotalSeconds:F1}s · Método: {result.ScanMethod}" +
+                                (vulnSourceProblem ? " · ⚠ NVD inacessível: vulnerabilidades incompletas" : "");
+            _statusLabel.ForeColor = vulnSourceProblem ? Theme.Warning : Theme.Success;
             _exportButton.Enabled = result.Devices.Count > 0;
         }
         catch (OperationCanceledException)
@@ -789,7 +796,10 @@ public sealed class MainForm : Form
 
             var osText = string.IsNullOrEmpty(device.OperatingSystem) ? "—" : $"{device.OperatingSystem} ({device.OSConfidence})";
             var servicesText = device.Services.Count > 0 ? $"{device.Services.Count}" : "—";
-            var vulnsText = device.Vulnerabilities.Count > 0 ? $"{device.Vulnerabilities.Count}" : "—";
+            var exploited = device.Vulnerabilities.Count(v => v.IsKnownExploited);
+            var vulnsText = device.Vulnerabilities.Count == 0 ? "—"
+                : exploited > 0 ? $"{device.Vulnerabilities.Count} ({exploited} KEV)"
+                : $"{device.Vulnerabilities.Count}";
 
             var idx = _grid.Rows.Add(
                 device.IpAddress,
@@ -1287,17 +1297,20 @@ public sealed class MainForm : Form
         using var form = new Form
         {
             Text = $"Detalhes: {device.DisplayName}",
-            Size = new Size(600, 500),
+            Size = new Size(760, 620),
             StartPosition = FormStartPosition.CenterParent,
             MinimizeBox = false,
-            MaximizeBox = true
+            MaximizeBox = true,
+            BackColor = Theme.Background,
+            ForeColor = Theme.Text
         };
 
         var panel = new Panel
         {
             Dock = DockStyle.Fill,
             Padding = new Padding(20),
-            AutoScroll = true
+            AutoScroll = true,
+            BackColor = Theme.Background
         };
 
         var y = 10;
@@ -1322,75 +1335,7 @@ public sealed class MainForm : Form
             y += 10;
         }
 
-        // Services
-        if (device.Services.Any())
-        {
-            AddLabel(panel, "Serviços", ref y, true);
-            foreach (var service in device.Services)
-            {
-                AddLabel(panel, $"Porta {service.Port}: {service.Service} {service.Product} {service.Version}", ref y);
-                if (!string.IsNullOrEmpty(service.Banner))
-                {
-                    var bannerLabel = new Label
-                    {
-                        Text = $"  Banner: {service.Banner.Substring(0, Math.Min(100, service.Banner.Length))}...",
-                        Location = new Point(40, y),
-                        AutoSize = true,
-                        Font = new Font("Segoe UI", 8F, FontStyle.Italic),
-                        ForeColor = Color.Gray
-                    };
-                    panel.Controls.Add(bannerLabel);
-                    y += 20;
-                }
-            }
-            y += 10;
-        }
-        else
-        {
-            AddLabel(panel, "Serviços", ref y, true);
-            AddLabel(panel, "Nenhum serviço detetado", ref y);
-            y += 10;
-        }
-
-        // Vulnerabilities
-        if (device.Vulnerabilities.Any())
-        {
-            AddLabel(panel, "Vulnerabilidades", ref y, true);
-            foreach (var vuln in device.Vulnerabilities)
-            {
-                var vulnLabel = new Label
-                {
-                    Text = $"[{vuln.Severity}] {vuln.CVE}",
-                    Location = new Point(20, y),
-                    AutoSize = true,
-                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                    ForeColor = vuln.Severity switch
-                    {
-                        "Critical" => Color.DarkRed,
-                        "High" => Color.OrangeRed,
-                        "Medium" => Color.Orange,
-                        _ => Color.Green
-                    }
-                };
-                panel.Controls.Add(vulnLabel);
-                y += 20;
-
-                var descLabel = new Label
-                {
-                    Text = $"  {vuln.Description}",
-                    Location = new Point(40, y),
-                    AutoSize = true,
-                    Font = new Font("Segoe UI", 8F)
-                };
-                panel.Controls.Add(descLabel);
-                y += 20;
-            }
-        }
-        else
-        {
-            AddLabel(panel, "Vulnerabilidades", ref y, true);
-            AddLabel(panel, "Nenhuma vulnerabilidade conhecida", ref y);
-        }
+        AddServiceAndVulnerabilitySections(panel, device, ref y);
 
         form.Controls.Add(panel);
         form.ShowDialog(this);
@@ -1408,6 +1353,161 @@ public sealed class MainForm : Form
         };
         panel.Controls.Add(label);
         y += isHeader ? 25 : 20;
+    }
+
+    /// <summary>Texto com quebra de linha automática (largura ajustada à janela de detalhes de 760 px).</summary>
+    private static void AddWrappedLabel(Panel panel, string text, ref int y, int x, Font font, Color color)
+    {
+        var width = 690 - x;
+        var label = new Label
+        {
+            Text = text,
+            Location = new Point(x, y),
+            AutoSize = true,
+            MaximumSize = new Size(width, 0),
+            Font = font,
+            ForeColor = color
+        };
+        panel.Controls.Add(label);
+        y += label.PreferredHeight + 4;
+    }
+
+    private static string DescribeCheck(ServiceInfo service) => service.VulnerabilityCheck switch
+    {
+        VulnerabilityCheckStatus.Checked => "verificado na NVD",
+        VulnerabilityCheckStatus.CheckedWithStaleData => "verificado com dados em cache (sem ligação)",
+        VulnerabilityCheckStatus.VersionUnknown => "versão desconhecida, não é possível verificar",
+        VulnerabilityCheckStatus.UnsupportedProduct => "produto ainda não suportado",
+        VulnerabilityCheckStatus.SourceUnavailable => "NVD inacessível, não verificado",
+        _ => ""
+    };
+
+    private static Color SeverityColor(string severity) => severity switch
+    {
+        "Critical" => Color.FromArgb(255, 82, 82),
+        "High" => Color.FromArgb(255, 140, 66),
+        "Medium" => Theme.Warning,
+        "Low" => Theme.Success,
+        _ => Theme.TextMuted
+    };
+
+    private static string SeverityLabel(string severity) => severity switch
+    {
+        "Critical" => "Crítica",
+        "High" => "Alta",
+        "Medium" => "Média",
+        "Low" => "Baixa",
+        "None" => "Nenhuma",
+        _ => "Sem pontuação"
+    };
+
+    private void AddServiceAndVulnerabilitySections(Panel panel, DeviceInfo device, ref int y)
+    {
+        var small = new Font("Segoe UI", 8.5F);
+        var smallItalic = new Font("Segoe UI", 8F, FontStyle.Italic);
+        var bold = new Font("Segoe UI", 9F, FontStyle.Bold);
+
+        // Serviços
+        AddLabel(panel, "Serviços", ref y, true);
+        if (device.Services.Count == 0)
+        {
+            AddLabel(panel, "Nenhum serviço detetado", ref y);
+        }
+        foreach (var service in device.Services)
+        {
+            var product = string.Join(" ", new[] { service.Product, service.Version }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var line = $"Porta {service.Port}: {service.Service}" + (product.Length > 0 ? $" · {product}" : "");
+            if (service.IsDistroPackage)
+                line += $" ({service.DistroName})";
+            AddLabel(panel, line, ref y);
+
+            var check = DescribeCheck(service);
+            if (check.Length > 0)
+                AddWrappedLabel(panel, $"Vulnerabilidades: {check}", ref y, 40, smallItalic, Theme.TextMuted);
+
+            if (!string.IsNullOrEmpty(service.Banner))
+            {
+                var banner = new string(service.Banner.Take(100).Select(c => char.IsControl(c) ? ' ' : c).ToArray()).Trim();
+                AddWrappedLabel(panel, $"Banner: {banner}", ref y, 40, smallItalic, Theme.TextMuted);
+            }
+        }
+        y += 10;
+
+        // Vulnerabilidades
+        AddLabel(panel, "Vulnerabilidades potenciais", ref y, true);
+
+        var requested = device.Services.Any(s => s.VulnerabilityCheck != VulnerabilityCheckStatus.NotRequested);
+        if (!requested)
+        {
+            AddLabel(panel, "Verificação não pedida (ativa \"Serviços\" e \"Vulnerabilidades\").", ref y);
+            return;
+        }
+
+        if (device.Vulnerabilities.Count == 0)
+        {
+            var anyChecked = device.Services.Any(s => s.VulnerabilityCheck is VulnerabilityCheckStatus.Checked or VulnerabilityCheckStatus.CheckedWithStaleData);
+            AddLabel(panel, anyChecked
+                ? "Nenhuma vulnerabilidade conhecida para as versões detetadas."
+                : "Nenhum serviço pôde ser verificado (ver estado de cada serviço acima).", ref y);
+            return;
+        }
+
+        AddWrappedLabel(panel,
+            "Correspondência pela versão anunciada no banner. Não confirma que o dispositivo está vulnerável: " +
+            "configuração, módulos ativos e correções aplicadas pelo fabricante podem mudar o resultado.",
+            ref y, 20, smallItalic, Theme.TextMuted);
+
+        if (device.Vulnerabilities.Any(v => v.MayBeBackported))
+        {
+            AddWrappedLabel(panel,
+                "⚠ Pacotes de distribuição (Ubuntu, Debian, RHEL…) recebem correções sem mudar o número de versão. " +
+                "Confirma no próprio sistema se estas falhas já foram corrigidas.",
+                ref y, 20, small, Theme.Warning);
+        }
+        y += 6;
+
+        foreach (var vuln in device.Vulnerabilities)
+        {
+            var score = vuln.CvssScore.HasValue ? $" {vuln.CvssScore:0.0}" : "";
+            var header = $"[{SeverityLabel(vuln.Severity)}{score}] {vuln.CVE} · {vuln.Product} {vuln.DetectedVersion} (porta {vuln.Port})";
+            AddWrappedLabel(panel, header, ref y, 20, bold, SeverityColor(vuln.Severity));
+
+            if (vuln.IsKnownExploited)
+            {
+                var kev = "🔥 Exploração ativa confirmada (CISA KEV)" + (vuln.KnownRansomwareUse ? " · usada em ransomware" : "");
+                AddWrappedLabel(panel, kev, ref y, 40, bold, Theme.Danger);
+            }
+
+            if (!string.IsNullOrWhiteSpace(vuln.Description))
+            {
+                var description = vuln.Description.Length > 400 ? vuln.Description[..400] + "…" : vuln.Description;
+                AddWrappedLabel(panel, description, ref y, 40, small, Theme.Text);
+            }
+
+            var link = new LinkLabel
+            {
+                Text = vuln.Url,
+                Location = new Point(40, y),
+                AutoSize = true,
+                Font = small,
+                LinkColor = Theme.Primary,
+                ActiveLinkColor = Theme.PrimaryHover
+            };
+            var url = vuln.Url;
+            link.LinkClicked += (_, _) =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); }
+                catch { /* sem browser predefinido */ }
+            };
+            panel.Controls.Add(link);
+            y += 24;
+        }
+
+        if (!string.IsNullOrEmpty(_lastVulnerabilityNote))
+        {
+            y += 6;
+            AddWrappedLabel(panel, _lastVulnerabilityNote, ref y, 20, smallItalic, Theme.TextMuted);
+        }
     }
 
     private void AuditReportButton_Click(object? sender, EventArgs e)
@@ -1543,7 +1643,8 @@ public sealed class MainForm : Form
                     {
                         Devices = _lastDevices,
                         ScanMethod = "Auditoria Completa",
-                        Duration = TimeSpan.Zero
+                        Duration = TimeSpan.Zero,
+                        VulnerabilitySourceNote = _lastVulnerabilityNote
                     };
 
                     var report = format switch
