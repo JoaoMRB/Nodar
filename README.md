@@ -10,6 +10,16 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 
 > **Estado:** em desenvolvimento ativo.
 
+<p align="center">
+  <img src="docs/screenshots/dispositivos.png" alt="Lista de dispositivos da rede" width="100%" />
+</p>
+
+| Detalhes de um dispositivo | Segurança |
+|---|---|
+| ![Painel de detalhes com serviços e vulnerabilidades](docs/screenshots/detalhes.png) | ![Vulnerabilidades potenciais da rede](docs/screenshots/seguranca.png) |
+
+<sub>Capturas do [modo demonstração](#modo-demonstração): rede fictícia, CVEs reais da NVD.</sub>
+
 ---
 
 ## Funcionalidades
@@ -91,6 +101,11 @@ dist\Nodar.exe --demo
 ```
 Mostra uma rede fictícia com serviços desatualizados, para veres a interface com vulnerabilidades sem precisares de uma rede vulnerável. Os dispositivos são inventados, mas os serviços são verificados na NVD real, por isso os CVEs são verdadeiros para essas versões. Usa uma pasta temporária e não mexe no teu histórico.
 
+Para regenerar os screenshots do README (renderizados fora do ecrã, sem mostrar nada do teu ambiente de trabalho):
+```bash
+dotnet run --project tools/Screenshots -- docs/screenshots --demo
+```
+
 ### Testes
 ```bash
 dotnet test
@@ -169,6 +184,9 @@ src/Nodar.Core/                      # Lógica, sem interface gráfica
     ├── TracerouteService.cs         # (em desenvolvimento)
     └── TimingTemplates.cs           # (em desenvolvimento)
 tests/Nodar.Tests/                   # Testes (xUnit), com respostas reais da NVD como fixtures
+tools/IconGenerator/                 # Gera o ícone da app
+tools/Screenshots/                   # Gera os screenshots do README (headless, modo demonstração)
+docs/screenshots/                    # Screenshots do README
 archive/python-web/                  # Protótipo web original em Python (não é mantido)
 ```
 
@@ -201,7 +219,7 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 - [x] Identificação por Bonjour/mDNS e registo de fabricantes do IEEE
 - [x] Identificação por SSDP/UPnP e NetBIOS
 - [x] Ícone da aplicação
-- [ ] Screenshots no README
+- [x] Screenshots no README
 - [ ] Testes dos ViewModels da interface (o Core já tem 155 testes)
 
 ---
