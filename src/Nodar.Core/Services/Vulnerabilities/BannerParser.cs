@@ -74,8 +74,9 @@ public static class BannerParser
             return new ParsedBanner("bind", "ISC BIND", bind.Groups["v"].Value, distro, name);
         }
 
-        // Servidor respondeu mas esconde a versão (ex.: "none", "unknown", texto livre).
-        return new ParsedBanner("", "DNS", "", false, "");
+        // Servidor respondeu mas esconde a versão (ex.: "none", "unknown", texto livre):
+        // nenhum produto identificado.
+        return new ParsedBanner("", "", "", false, "");
     }
 
     // SSH: "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5", "SSH-2.0-dropbear_2022.83"
@@ -121,7 +122,7 @@ public static class BannerParser
 
         var server = Regex.Match(banner, @"^Server:[ \t]*(?<s>[^\r\n]+)", Opts | RegexOptions.Multiline);
         if (!server.Success)
-            return new ParsedBanner("", "HTTP", "", false, "");
+            return new ParsedBanner("", "", "", false, "");
 
         var value = server.Groups["s"].Value.Trim();
         var (distro, distroName) = DetectDistro(value);
@@ -162,6 +163,10 @@ public static class BannerParser
             if (Regex.IsMatch(value, $@"^{Regex.Escape(bare)}(?:$|[\s/(])", Opts))
                 return new ParsedBanner(key, name, "", distro, distroName);
         }
+
+        // Cabeçalhos genéricos ("HTTP Server", "WebServer", "httpd"…) não identificam nenhum produto.
+        if (Regex.IsMatch(value, @"^(?:HTTP ?Server|Web ?Server|Server|httpd|webs|Embedded HTTP Server\.?)$", Opts))
+            return new ParsedBanner("", "", "", distro, distroName);
 
         return new ParsedBanner("", value.Split('/', ' ')[0], "", distro, distroName);
     }

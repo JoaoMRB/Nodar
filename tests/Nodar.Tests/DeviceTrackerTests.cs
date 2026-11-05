@@ -179,3 +179,29 @@ public sealed class DeviceTrackerTests : IDisposable
     public void Key_prefers_mac(string mac, string ip, string expected) =>
         Assert.Equal(expected, DeviceTracker.KeyFor(mac, ip));
 }
+
+public sealed class DeviceTrackerNewnessTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "nodar-tracker-" + Guid.NewGuid().ToString("N"));
+    private DateTime _now = new(2026, 11, 5, 10, 0, 0);
+    public void Dispose() { try { Directory.Delete(_dir, true); } catch { } }
+
+    [Fact]
+    public void Baseline_devices_are_not_recently_new_but_later_ones_are_for_24h()
+    {
+        var t = new DeviceTracker(_dir, () => _now);
+        t.Load();
+        var a = new Nodar.Core.Models.DeviceInfo { IpAddress = "10.0.0.2", MacAddress = "AA:AA:AA:AA:AA:01" };
+        var b = new Nodar.Core.Models.DeviceInfo { IpAddress = "10.0.0.3", MacAddress = "AA:AA:AA:AA:AA:02" };
+
+        t.ApplyScan([a]);
+        Assert.False(t.IsRecentlyNew(t.GetHistory(a), TimeSpan.FromHours(24)));
+
+        _now = _now.AddHours(2);
+        t.ApplyScan([a, b]);
+        Assert.True(t.IsRecentlyNew(t.GetHistory(b), TimeSpan.FromHours(24)));
+
+        _now = _now.AddHours(25);
+        Assert.False(t.IsRecentlyNew(t.GetHistory(b), TimeSpan.FromHours(24)));
+    }
+}

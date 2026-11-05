@@ -47,6 +47,17 @@ public sealed class DeviceTracker
     public IReadOnlyCollection<DeviceHistoryEntry> History => _history.Values;
     public IReadOnlyList<WatchedDevice> Watchlist => _watchlist;
 
+    /// <summary>Momento do primeiro scan de sempre (linha de base): o que já lá estava não é "novo".</summary>
+    public DateTime? BaselineAt => _history.Count == 0 ? null : _history.Values.Min(e => e.FirstSeenAt ?? e.SeenAt);
+
+    /// <summary>Visto pela primeira vez depois da linha de base e há menos de <paramref name="window"/>.</summary>
+    public bool IsRecentlyNew(DeviceHistoryEntry? entry, TimeSpan window)
+    {
+        if (entry?.FirstSeenAt is not { } first || BaselineAt is not { } baseline)
+            return false;
+        return first > baseline.AddMinutes(1) && _now() - first < window;
+    }
+
     /// <summary>Chave estável de um dispositivo: MAC normalizado ou, sem MAC, o IP.</summary>
     public static string KeyFor(string? mac, string? ip)
     {

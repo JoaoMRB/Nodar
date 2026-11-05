@@ -141,3 +141,32 @@ public class BannerParserTests
     public void Unknown_banners_return_null(string banner) =>
         Assert.Null(BannerParser.Parse(banner, 12345));
 }
+
+public class GenericBannerTests
+{
+    [Theory]
+    [InlineData("HTTP/1.1 200 OK\r\nServer: HTTP Server\r\n\r\n")]
+    [InlineData("HTTP/1.1 200 OK\r\nServer: WebServer\r\n\r\n")]
+    [InlineData("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")]
+    public void Generic_http_banners_identify_no_product(string banner)
+    {
+        var r = BannerParser.Parse(banner, 80);
+        Assert.NotNull(r);
+        Assert.Equal("", r!.ProductKey);
+        Assert.Equal("", r.ProductName);
+    }
+
+    [Fact]
+    public void Hidden_dns_version_identifies_no_product()
+    {
+        var r = BannerParser.Parse(Nodar.Core.Services.DnsVersionProbe.BannerPrefix + "UNKNOWN", 53);
+        Assert.Equal("", r!.ProductName);
+    }
+
+    [Fact]
+    public void Real_unknown_http_product_keeps_its_name()
+    {
+        var r = BannerParser.Parse("HTTP/1.1 200 OK\r\nServer: GoAhead-Webs\r\n\r\n", 80);
+        Assert.Equal("GoAhead-Webs", r!.ProductName);
+    }
+}
