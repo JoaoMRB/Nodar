@@ -1,0 +1,23 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Build output (distribuir via GitHub Releases)
+dist/
+publish/
+*.pdb
+
+# Python (arquivo legado)
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Ambiente / editor
+.env
+.vscode/
+.idea/
+Thumbs.db
