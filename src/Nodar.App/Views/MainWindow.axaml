@@ -216,7 +216,11 @@
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AutoRefresh}">
                       <TextBlock Classes="caption" Text="{l:T options.interval}" VerticalAlignment="Center" />
-                      <ComboBox Grid.Column="1" MinWidth="140" ItemsSource="{Binding IntervalOptions}" SelectedItem="{Binding SelectedInterval}" />
+                      <ComboBox Grid.Column="1" MinWidth="140" ItemsSource="{Binding IntervalOptions}" SelectedItem="{Binding SelectedInterval}">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate x:DataType="vm:IntervalOption"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.showOffline}" />
@@ -241,7 +245,11 @@
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.language}" />
                         <TextBlock Classes="caption" Text="{l:T options.language.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ComboBox Grid.Column="1" MinWidth="150" VerticalAlignment="Center"
-                                ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding SelectedLanguage}" />
+                                ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding SelectedLanguage}">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate x:DataType="vm:LanguageOption"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CanStartWithWindows}">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.startWithWindows}" />

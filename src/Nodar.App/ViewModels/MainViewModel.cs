@@ -89,31 +89,49 @@ public sealed partial class MainViewModel : ObservableObject
 
     // ================================================================ Idioma
 
-    [ObservableProperty] private IReadOnlyList<LanguageOption> _languageOptions = [new("auto"), new("pt"), new("en")];
+    /// <summary>Opções fixas (nunca recriadas): ver <see cref="OnLanguageChanged"/>.</summary>
+    public IReadOnlyList<LanguageOption> LanguageOptions { get; } = [new("auto"), new("pt"), new("en")];
 
     [ObservableProperty] private LanguageOption? _selectedLanguage;
 
     partial void OnSelectedLanguageChanged(LanguageOption? value)
     {
-        Instance.Apply(value?.Code);
+        // A caixa de seleção pode limpar a seleção por momentos: isso não é "escolher automático".
+        if (value == null)
+            return;
+        Instance.Apply(value.Code);
         SaveSettings();
     }
 
-    /// <summary>O idioma mudou: refazer tudo o que tem texto calculado (as ligações {l:T} atualizam-se sozinhas).</summary>
+    private bool _refreshPending;
+
+    /// <summary>
+    /// O idioma mudou. As listas das caixas de seleção nunca são recriadas (isso limpava a seleção e
+    /// provocava um ciclo pt↔en que bloqueava a app): só os textos das opções são atualizados. O resto da
+    /// interface é refeito depois de a caixa de seleção terminar o seu evento.
+    /// </summary>
     private void OnLanguageChanged()
     {
-        var interval = SelectedInterval?.Seconds;
-        IntervalOptions = [new(60), new(120), new(300), new(900)];
-        _loadingSettings = true;
-        SelectedInterval = IntervalOptions.FirstOrDefault(o => o.Seconds == interval) ?? IntervalOptions[1];
-        var language = SelectedLanguage?.Code;
-        LanguageOptions = [new("auto"), new("pt"), new("en")];
-        SelectedLanguage = LanguageOptions.First(o => o.Code == (language ?? "auto"));
-        _loadingSettings = false;
+        foreach (var option in LanguageOptions)
+            option.Refresh();
+        foreach (var option in IntervalOptions)
+            option.Refresh();
 
-        RebuildDevices();
-        RebuildWatchlist();
-        OnPropertyChanged(string.Empty);
+        if (_refreshPending)
+            return;
+        _refreshPending = true;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            _refreshPending = false;
+            RebuildDevices();
+            RebuildWatchlist();
+            OnPropertyChanged(nameof(PageTitle));
+            OnPropertyChanged(nameof(PageSubtitle));
+            OnPropertyChanged(nameof(DevicesSubtitle));
+            OnPropertyChanged(nameof(SecuritySubtitle));
+            OnPropertyChanged(nameof(LastScanText));
+            OnPropertyChanged(nameof(ScanModeSummary));
+        }, Avalonia.Threading.DispatcherPriority.Background);
     }
     partial void OnCloseToTrayChanged(bool value) => SaveSettings();
 
@@ -217,7 +235,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _showOffline;
     [ObservableProperty] private IntervalOption? _selectedInterval;
 
-    [ObservableProperty] private IReadOnlyList<IntervalOption> _intervalOptions = [new(60), new(120), new(300), new(900)];
+    public IReadOnlyList<IntervalOption> IntervalOptions { get; } = [new(60), new(120), new(300), new(900)];
 
     // Dependências: vulnerabilidades ⇒ serviços ⇒ portas.
     partial void OnVulnerabilityScanChanged(bool value)
@@ -810,19 +828,27 @@ public sealed partial class MainViewModel : ObservableObject
     }
 }
 
-public sealed record LanguageOption(string Code)
+/// <summary>Opção de idioma. Classe (não record): a identidade não muda e o texto atualiza-se sozinho.</summary>
+public sealed class LanguageOption(string code) : ObservableObject
 {
+    public string Code { get; } = code;
+
     public string Label => Code switch
     {
         "pt" => "Português",
         "en" => "English",
-        _ => F("language.auto", Instance.Language == "pt" ? "Português" : "English")
+        // "Automático" segue o Windows: mostrar o idioma do sistema, não o que está escolhido agora.
+        _ => F("language.auto", Loc.SystemLanguage() == "pt" ? "Português" : "English")
     };
+
+    public void Refresh() => OnPropertyChanged(nameof(Label));
     public override string ToString() => Label;
 }
 
-public sealed record IntervalOption(int Seconds)
+public sealed class IntervalOption(int seconds) : ObservableObject
 {
+    public int Seconds { get; } = seconds;
     public string Label => Plural("interval.minutes", Seconds / 60);
+    public void Refresh() => OnPropertyChanged(nameof(Label));
     public override string ToString() => Label;
 }
