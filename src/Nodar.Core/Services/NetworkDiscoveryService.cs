@@ -367,7 +367,11 @@ public static class NetworkDiscoveryService
             // A resolução inversa no Windows pode esperar vários segundos por NetBIOS/LLMNR: limite de 2,5 s.
             var lookup = Dns.GetHostEntryAsync(ip);
             if (await Task.WhenAny(lookup, Task.Delay(2500)) != lookup)
+            {
+                // A resolução não se pode cancelar: observar o resultado tardio para não gerar erros "não observados".
+                _ = lookup.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
                 return "";
+            }
             var entry = await lookup;
             return entry.HostName != ip ? entry.HostName : "";
         }
@@ -387,16 +391,25 @@ public static class NetworkDiscoveryService
             CancellationToken = ct
         }, async (port, token) =>
         {
+            // Timeout por cancelamento (não por Task.WhenAny): a ligação é cancelada e observada, em vez de ficar
+            // abandonada e falhar mais tarde sem ninguém a ler.
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeout.CancelAfter(300);
             try
             {
                 using var client = new TcpClient();
-                var connectTask = client.ConnectAsync(IPAddress.Parse(ip), port, token).AsTask();
-                var completed = await Task.WhenAny(connectTask, Task.Delay(300, token));
-
-                if (completed == connectTask && client.Connected)
+                await client.ConnectAsync(IPAddress.Parse(ip), port, timeout.Token);
+                if (client.Connected)
                     open.Add(port);
             }
-            catch { }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                throw; // cancelamento do scan pelo utilizador
+            }
+            catch
+            {
+                // fechada, filtrada ou sem resposta em 300 ms
+            }
         });
 
         return open.OrderBy(p => p).ToList();

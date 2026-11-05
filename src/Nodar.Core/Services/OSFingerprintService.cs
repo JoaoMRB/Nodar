@@ -109,6 +109,7 @@ public static class OSFingerprintService
             using var client = new TcpClient();
             var connectTask = client.ConnectAsync(IPAddress.Parse(ip), 80, ct).AsTask();
             var completed = await Task.WhenAny(connectTask, Task.Delay(2000, ct));
+            _ = connectTask.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted); // observar a ligação abandonada
 
             if (completed == connectTask && client.Connected)
             {
@@ -127,6 +128,7 @@ public static class OSFingerprintService
             using var client = new TcpClient();
             var connectTask = client.ConnectAsync(IPAddress.Parse(ip), 80, ct).AsTask();
             var completed = await Task.WhenAny(connectTask, Task.Delay(2000, ct));
+            _ = connectTask.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted); // observar a ligação abandonada
 
             if (completed == connectTask && client.Connected)
             {
@@ -155,6 +157,7 @@ public static class OSFingerprintService
                 using var client = new TcpClient();
                 var connectTask = client.ConnectAsync(IPAddress.Parse(ip), port, ct).AsTask();
                 var completed = await Task.WhenAny(connectTask, Task.Delay(500, ct));
+                _ = connectTask.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted); // observar a ligação abandonada
 
                 if (completed == connectTask && client.Connected)
                 {
@@ -180,6 +183,7 @@ public static class OSFingerprintService
             using var client = new TcpClient();
             var connectTask = client.ConnectAsync(IPAddress.Parse(ip), 80, ct).AsTask();
             var completed = await Task.WhenAny(connectTask, Task.Delay(2000, ct));
+            _ = connectTask.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted); // observar a ligação abandonada
 
             if (completed == connectTask && client.Connected)
             {
@@ -221,6 +225,7 @@ public static class OSFingerprintService
                 using var client = new TcpClient();
                 var connectTask = client.ConnectAsync(IPAddress.Parse(ip), port, ct).AsTask();
                 var completed = await Task.WhenAny(connectTask, Task.Delay(500, ct));
+                _ = connectTask.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted); // observar a ligação abandonada
 
                 if (completed == connectTask && client.Connected)
                 {
