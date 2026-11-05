@@ -27,6 +27,7 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 - **Não depende de ping**: iPhones bloqueados, Macs com firewall, impressoras e muitos aparelhos IoT ignoram ping, mas respondem sempre a ARP.
 - Redes até 1024 endereços são sempre varridas por inteiro; **Sub-rede completa** alarga o varrimento a redes maiores.
 - Nome por DNS reverso (o nome que o router atribui) e por **Bonjour/mDNS**: Macs, iPhones, iPads, Apple TV, Chromecast e impressoras anunciam o nome ("MacBook Pro da Ana") e o modelo.
+- **SSDP/UPnP**: Smart TVs, boxes, consolas e routers publicam o nome, o fabricante e o modelo (por exemplo, o modelo exato do router). **NetBIOS**: nome de PCs Windows e NAS.
 - **Fabricante** pelo registo oficial do IEEE (cerca de 40 000 fabricantes), descarregado e guardado em cache. Dispositivos com **endereço Wi-Fi privado** (MAC aleatório) aparecem como tal e são identificados por Bonjour.
 - **Tipo de dispositivo** pelo modelo, pelo fabricante e pelo hostname: router, computador, telemóvel, TV, impressora, consola, câmara, casa inteligente, servidor…
 - Dispositivos atrás de um **repetidor Wi-Fi** que partilha o mesmo MAC continuam separados (identificados por MAC+IP).
@@ -107,7 +108,7 @@ Ativa **Analisar portas**, **Serviços** e **Vulnerabilidades**. Para cada servi
 
 Cada serviço mostra o estado da verificação: *verificado*, *verificado com cache antiga*, *versão desconhecida*, *produto não suportado* ou *NVD inacessível*. Um serviço que não foi verificado nunca aparece como "sem vulnerabilidades".
 
-**Produtos suportados:** OpenSSH, Dropbear, Apache HTTP Server, nginx, Microsoft IIS, lighttpd, Jetty, vsftpd, ProFTPD, FileZilla Server, Exim, MySQL, MariaDB, Redis, e também os comuns em routers: dnsmasq (incluindo Pi-hole), Unbound, ISC BIND e MiniUPnPd.
+**Produtos suportados:** OpenSSH, Dropbear, Apache HTTP Server, nginx, Microsoft IIS, lighttpd, Jetty, vsftpd, ProFTPD, FileZilla Server, Exim, MySQL, MariaDB, Redis, e também os comuns em routers: dnsmasq (incluindo Pi-hole), Unbound, ISC BIND, MiniUPnPd e libupnp (a pilha UPnP de muitos routers, lida no anúncio SSDP).
 
 **Importante:** os resultados são *potenciais*.
 - Uma correspondência por versão não prova que a falha existe. Configuração, módulos ativos e plataforma podem mudar o resultado.
@@ -117,7 +118,7 @@ Cada serviço mostra o estado da verificação: *verificado*, *verificado com ca
 - Para a NVD só é enviado o **identificador do produto** (ex.: `cpe:2.3:a:openbsd:openssh`). **Não são enviados IPs, MACs, hostnames nem as versões detetadas.** A comparação de versões é feita no teu PC.
 - O catálogo KEV é descarregado inteiro, sem nenhum dado teu.
 - Para identificar fabricantes, o Nodar descarrega o registo público do IEEE (`standards-oui.ieee.org`) uma vez por mês. Nenhum dado teu é enviado.
-- As perguntas Bonjour/mDNS e ARP ficam só na tua rede local.
+- As perguntas ARP, Bonjour/mDNS, SSDP e NetBIOS ficam só na tua rede local. O descritor UPnP só é lido do próprio dispositivo que o anunciou, por HTTP na rede local, com limites de tamanho e tempo e sem processar DTD (proteção contra XXE).
 - Os dados ficam em cache em `%LOCALAPPDATA%\Nodar\cache\`: a NVD durante 3 dias e o KEV durante 1. Sem internet, é usada a cache existente e a app avisa.
 
 ### Chave da NVD (opcional)
@@ -144,6 +145,8 @@ src/Nodar.Core/                      # Lógica, sem interface gráfica
     ├── NetworkDiscoveryService.cs   # Orquestração do scan (em paralelo)
     ├── NeighborDiscovery.cs         # Descoberta ARP (tabela de vizinhos do Windows)
     ├── MdnsProbe.cs                 # Bonjour/mDNS: nome e modelo
+    ├── SsdpProbe.cs                 # SSDP/UPnP: nome, fabricante, modelo, pilha UPnP
+    ├── NetBiosProbe.cs              # Nome NetBIOS (PCs Windows, NAS)
     ├── DeviceIdentification.cs      # Modelo → família e tipo (Mac14,7 → Mac)
     ├── OuiRegistry.cs               # Registo de fabricantes do IEEE
     ├── VendorService.cs             # Fabricante e tipo de dispositivo
@@ -189,13 +192,14 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 
 - [x] Base de vulnerabilidades com dados oficiais (NVD / CISA KEV) em vez de uma lista estática
 - [x] Ler banners HTTPS/TLS e incluir o gateway na análise
-- [ ] Identificar o firmware do router (modelo e versão) por UPnP/SSDP e páginas de login
+- [x] Identificar o modelo do router por UPnP/SSDP
+- [ ] Versão do firmware do router (páginas de administração, TR-069)
 - [ ] Ligar à interface o scanner avançado, o traceroute e os perfis de timing
 - [x] Interface moderna (Avalonia) e lógica separada em `Nodar.Core`
 - [ ] Notificações do Windows e monitorização em segundo plano (bandeja do sistema)
 - [ ] Nomes personalizados e "dispositivos de confiança"
 - [x] Identificação por Bonjour/mDNS e registo de fabricantes do IEEE
-- [ ] Identificação por NetBIOS e SSDP/UPnP (Windows, Smart TVs, consolas)
+- [x] Identificação por SSDP/UPnP e NetBIOS
 - [x] Ícone da aplicação
 - [ ] Screenshots no README
 - [ ] Testes dos ViewModels da interface (o Core já tem 155 testes)
