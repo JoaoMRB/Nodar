@@ -19,8 +19,8 @@ Aplicação nativa para Windows, feita em C# / .NET 9 (WinForms). Analisa a tua 
 - Marca o dispositivo que corresponde a este PC.
 
 ### Análise
-- **Scan de portas** às portas TCP mais comuns.
-- **Deteção de serviços** por leitura de banners (produto e versão).
+- **Scan de portas** às portas TCP mais comuns, incluindo as típicas de routers (TR-069, UPnP). O router também é analisado.
+- **Deteção de serviços** por leitura de banners, incluindo HTTPS (TLS) e a versão do servidor DNS (`version.bind`). As sondas nunca enviam credenciais nem tentativas de login.
 - **Deteção de sistema operativo** por fingerprint TCP/IP (TTL, window size, MSS, flag DF), com nível de confiança.
 - **Verificação de vulnerabilidades conhecidas** com dados oficiais da [NVD](https://nvd.nist.gov/) (NIST) e do catálogo [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog). Ver [Como funciona a verificação de vulnerabilidades](#como-funciona-a-verificação-de-vulnerabilidades).
 
@@ -89,7 +89,7 @@ Ativa **Analisar portas**, **Serviços** e **Vulnerabilidades**. Para cada servi
 
 Cada serviço mostra o estado da verificação: *verificado*, *verificado com cache antiga*, *versão desconhecida*, *produto não suportado* ou *NVD inacessível*. Um serviço que não foi verificado nunca aparece como "sem vulnerabilidades".
 
-**Produtos suportados:** OpenSSH, Dropbear, Apache HTTP Server, nginx, Microsoft IIS, lighttpd, Jetty, vsftpd, ProFTPD, FileZilla Server, Exim, MySQL, MariaDB e Redis.
+**Produtos suportados:** OpenSSH, Dropbear, Apache HTTP Server, nginx, Microsoft IIS, lighttpd, Jetty, vsftpd, ProFTPD, FileZilla Server, Exim, MySQL, MariaDB, Redis, e também os comuns em routers: dnsmasq (incluindo Pi-hole), Unbound, ISC BIND e MiniUPnPd.
 
 **Importante:** os resultados são *potenciais*.
 - Uma correspondência por versão não prova que a falha existe. Configuração, módulos ativos e plataforma podem mudar o resultado.
@@ -120,7 +120,8 @@ NetworkScanner/
     ├── VendorService.cs             # Base OUI (fabricante) e tipo de dispositivo
     ├── OSFingerprintService.cs      # Fingerprint de sistema operativo
     ├── OSFingerprintDatabase.cs     # Assinaturas de SO
-    ├── ServiceDetectionService.cs   # Leitura de banners
+    ├── ServiceDetectionService.cs   # Leitura de banners (TCP e TLS, com timeouts)
+    ├── DnsVersionProbe.cs           # Versão do servidor DNS (version.bind)
     ├── Vulnerabilities/
     │   ├── BannerParser.cs          # Produto e versão a partir do banner
     │   ├── ProductCatalog.cs        # Produtos suportados e identificadores CPE
@@ -148,8 +149,7 @@ Os dados locais (histórico, lista de monitorização e cache de vulnerabilidade
 - Só analisa a rede local onde o PC está ligado.
 - Alguns dispositivos não respondem a ping nem a ARP (firewall, modo de poupança de energia, smartphones com MAC aleatório) e podem não aparecer ou aparecer de forma intermitente.
 - A deteção de SO é **heurística** e pode falhar, sobretudo com dispositivos IoT.
-- O **router/gateway** ainda não passa pelo scan de portas nem pela verificação de vulnerabilidades.
-- A verificação de vulnerabilidades depende do banner. Serviços **HTTPS/TLS** ainda não são lidos, e muitos dispositivos (routers, câmaras, IoT) não anunciam versão. Uma correspondência por versão **não confirma** que o dispositivo está vulnerável. Não substitui uma auditoria de segurança a sério.
+- A verificação de vulnerabilidades depende do banner. Muitos dispositivos (routers, câmaras, IoT) não anunciam versão. Uma correspondência por versão **não confirma** que o dispositivo está vulnerável. Não substitui uma auditoria de segurança a sério.
 - As descrições dos CVEs vêm da NVD, em inglês.
 
 ---
@@ -157,7 +157,8 @@ Os dados locais (histórico, lista de monitorização e cache de vulnerabilidade
 ## Roadmap
 
 - [x] Base de vulnerabilidades com dados oficiais (NVD / CISA KEV) em vez de uma lista estática
-- [ ] Ler banners HTTPS/TLS e incluir o gateway na análise
+- [x] Ler banners HTTPS/TLS e incluir o gateway na análise
+- [ ] Identificar o firmware do router (modelo e versão) por UPnP/SSDP e páginas de login
 - [ ] Ligar à interface o scanner avançado, o traceroute e os perfis de timing
 - [ ] Monitorização em segundo plano (minimizado para a bandeja / serviço)
 - [ ] Nomes personalizados e "dispositivos de confiança"
