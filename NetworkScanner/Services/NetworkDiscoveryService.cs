@@ -17,7 +17,9 @@ public static class NetworkDiscoveryService
     private static readonly int[] CommonPorts =
     [
         21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995,
-        3306, 3389, 5000, 5900, 8000, 8080, 8443, 8888
+        3306, 3389, 5000, 5900, 6379, 7547, 8000, 8080, 8443, 8888, 49152
+        // 7547: TR-069/CWMP (gestão remota do operador em routers)
+        // 49152: UPnP (miniupnpd e outros, comum em routers)
     ];
 
     public static LocalNetworkInfo? GetLocalNetwork()
@@ -179,7 +181,8 @@ public static class NetworkDiscoveryService
                     hostname = "router";
             }
 
-            if (options.PortScan && ip != network.Gateway)
+            // O gateway (router) também é analisado: é o dispositivo mais exposto da rede.
+            if (options.PortScan)
             {
                 var ports = await ScanPortsAsync(ip, options.CancellationToken);
                 openPorts = ports.Count > 0 ? string.Join(", ", ports) : "";
@@ -204,7 +207,7 @@ public static class NetworkDiscoveryService
             }
 
             // OS Detection
-            if (options.OSDetection && ip != network.Gateway)
+            if (options.OSDetection)
             {
                 var osResult = await OSFingerprintService.DetectOSAsync(ip, options.CancellationToken);
                 operatingSystem = osResult.LikelyOS;

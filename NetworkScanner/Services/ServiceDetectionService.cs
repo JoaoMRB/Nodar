@@ -34,7 +34,11 @@ public static class ServiceDetectionService
         [6379] = "Redis",
         [8080] = "HTTP-Alt",
         [8443] = "HTTPS-Alt",
-        [8888] = "HTTP-Alt"
+        [8888] = "HTTP-Alt",
+        [5000] = "HTTP-Alt",
+        [8000] = "HTTP-Alt",
+        [7547] = "TR-069",
+        [49152] = "UPnP"
     };
 
     public static async Task<List<Models.ServiceInfo>> DetectServicesAsync(string ip, List<int> openPorts, CancellationToken ct = default)
@@ -133,7 +137,7 @@ public static class ServiceDetectionService
             110 => Encoding.ASCII.GetBytes("USER test\r\n"), // POP3
             143 => Encoding.ASCII.GetBytes("A001 LOGIN test test\r\n"), // IMAP
             443 => Encoding.ASCII.GetBytes("GET / HTTP/1.1\r\nHost: target\r\n\r\n"), // HTTPS
-            5000 or 8000 or 8080 or 8888 => Encoding.ASCII.GetBytes("HEAD / HTTP/1.1\r\nHost: target\r\nConnection: close\r\n\r\n"), // HTTP alternativo
+            5000 or 7547 or 8000 or 8080 or 8888 or 49152 => Encoding.ASCII.GetBytes("HEAD / HTTP/1.1\r\nHost: target\r\nConnection: close\r\n\r\n"), // HTTP alternativo
             3306 => new byte[] { }, // MySQL (no probe needed)
             5432 => new byte[] { }, // PostgreSQL (no probe needed)
             6379 => Encoding.ASCII.GetBytes("INFO server\r\n"), // Redis (devolve redis_version; PING não tem versão)
