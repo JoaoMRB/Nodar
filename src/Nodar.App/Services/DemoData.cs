@@ -48,17 +48,17 @@ public static class DemoData
 
         var specs = new (DeviceInfo Device, List<ServiceInfo> Services)[]
         {
-            (new DeviceInfo { IpAddress = "192.168.1.1", MacAddress = "D0:CF:0E:00:00:01", Hostname = "router", Vendor = "TP-Link", DeviceType = "Router", OpenPorts = "53, 80, 443, 49152" },
+            (new DeviceInfo { IpAddress = "192.168.1.1", MacAddress = "D0:CF:0E:00:00:01", Hostname = "router", Model = "TP-Link Archer AX55", Vendor = "TP-Link", DeviceType = "Router", OpenPorts = "53, 80, 443, 49152" },
              [Svc(53, "DNS", "dnsmasq", "dnsmasq", "2.78"), Svc(80, "HTTP", "lighttpd", "lighttpd", "1.4.45"), Svc(49152, "UPnP", "miniupnpd", "MiniUPnPd", "1.9")]),
-            (new DeviceInfo { IpAddress = "192.168.1.23", MacAddress = "3C:22:FB:10:4A:01", Hostname = "macbook-ana", Vendor = "Apple", DeviceType = "Computador", IsLocalDevice = true, OpenPorts = "" }, []),
+            (new DeviceInfo { IpAddress = "192.168.1.23", MacAddress = "3C:22:FB:10:4A:01", Hostname = "MacBook-Pro-da-Ana.local", FriendlyName = "MacBook Pro da Ana", Model = "MacBook Pro", ModelId = "MacBookPro18,3", Vendor = "Apple", DeviceType = "Computador", IsLocalDevice = true, OpenPorts = "" }, []),
             (new DeviceInfo { IpAddress = "192.168.1.40", MacAddress = "DC:A6:32:7B:00:12", Hostname = "homelab", Vendor = "Raspberry Pi", DeviceType = "Servidor", OpenPorts = "22, 80, 6379" },
              [Svc(22, "SSH", "openssh", "OpenSSH", "8.9p1", "Ubuntu"), Svc(80, "HTTP", "nginx", "nginx", "1.18.0", "Ubuntu"), Svc(6379, "Redis", "redis", "Redis", "6.0.16")]),
             (new DeviceInfo { IpAddress = "192.168.1.52", MacAddress = "00:11:32:AB:CD:EF", Hostname = "nas", Vendor = "Synology", DeviceType = "Servidor", OpenPorts = "21, 443" },
              [Svc(21, "FTP", "proftpd", "ProFTPD", "1.3.5"), Svc(443, "HTTPS", "nginx", "nginx", "1.20.1")]),
-            (new DeviceInfo { IpAddress = "192.168.1.61", MacAddress = "F4:F5:D8:00:11:22", Hostname = "GoogleTV-sala", Vendor = "Google", DeviceType = "TV", OpenPorts = "8008" }, []),
-            (new DeviceInfo { IpAddress = "192.168.1.77", MacAddress = "64:EB:8C:33:44:55", Hostname = "EPSON-escritorio", Vendor = "Epson", DeviceType = "Impressora", OpenPorts = "80, 631" },
+            (new DeviceInfo { IpAddress = "192.168.1.61", MacAddress = "F4:F5:D8:00:11:22", Hostname = "GoogleTV-sala", FriendlyName = "TV da Sala", Model = "Chromecast com Google TV", Vendor = "Google", DeviceType = "TV", OpenPorts = "8008" }, []),
+            (new DeviceInfo { IpAddress = "192.168.1.77", MacAddress = "64:EB:8C:33:44:55", Hostname = "EPSON-escritorio", FriendlyName = "Impressora do escritório", Model = "Epson ET-2850 Series", Vendor = "Epson", DeviceType = "Impressora", OpenPorts = "80, 631" },
              [Svc(80, "HTTP")]),
-            (new DeviceInfo { IpAddress = "192.168.1.88", MacAddress = "A4:83:E7:66:77:88", Hostname = "iPhone-Joao", Vendor = "Apple", DeviceType = "Apple", OpenPorts = "" }, []),
+            (new DeviceInfo { IpAddress = "192.168.1.88", MacAddress = "A4:83:E7:66:77:88", Hostname = "iPhone-do-Rui.local", FriendlyName = "iPhone do Rui", Model = "iPhone", ModelId = "iPhone16,1", Vendor = "Apple", DeviceType = "Apple", OpenPorts = "" }, []),
             (new DeviceInfo { IpAddress = "192.168.1.95", MacAddress = "7C:BB:8A:99:00:11", Hostname = "PS5", Vendor = "Sony", DeviceType = "Consola", OpenPorts = "" }, []),
         };
 
@@ -72,6 +72,7 @@ public static class DemoData
             devices.Add(new DeviceInfo
             {
                 IpAddress = device.IpAddress, MacAddress = device.MacAddress, Hostname = device.Hostname,
+                FriendlyName = device.FriendlyName, Model = device.Model, ModelId = device.ModelId,
                 Vendor = device.Vendor, DeviceType = device.DeviceType, IsLocalDevice = device.IsLocalDevice,
                 OpenPorts = device.OpenPorts, Services = services, Vulnerabilities = vulns
             });
