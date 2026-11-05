@@ -29,7 +29,7 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 - Lista de dispositivos com ícone e cor por tipo, selos (*Router*, *Este PC*, *Novo*), portas abertas e vulnerabilidades. Tem pesquisa por nome, IP, MAC ou fabricante.
 - Painel de detalhes com a informação do dispositivo, os serviços e o estado da verificação de cada um, as vulnerabilidades (CVSS, exploração ativa, ligação à NVD) e a atividade.
 - Opções de análise num painel próprio. As preferências ficam guardadas.
-- Notificações discretas dentro da app, sem caixas de diálogo a interromper.
+- Avisos discretos dentro da app, sem caixas de diálogo a interromper e sem roubar o foco.
 
 ### Descoberta de dispositivos
 - Deteção automática da rede local: interface, IP, máscara, gateway e intervalo da sub-rede. Ignora adaptadores virtuais (VPN, Hyper-V, VirtualBox…).
@@ -54,6 +54,9 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 - **Dispositivos novos**: aviso quando aparece um dispositivo que nunca tinha sido visto. O primeiro scan conta como linha de base.
 - **Monitorizados**: tocas na estrela de um dispositivo e recebes um aviso quando ele entra ou sai. Para evitar falsos alarmes com telemóveis em repouso, um dispositivo só é dado como saído depois de falhar dois scans seguidos.
 - **Atualização automática** com intervalo configurável (1 a 15 minutos).
+- **Notificações do Windows** (central de notificações) quando a janela não está à vista: dispositivo novo (vários agrupados numa só notificação), e entrada ou saída de um monitorizado. Clicar na notificação abre o Nodar.
+- **Segundo plano**: fechar a janela deixa o Nodar na bandeja a vigiar a rede (menu do ícone: *Abrir*, *Analisar agora*, *Sair*). Opcionalmente, **inicia com o Windows** já minimizado.
+- **Uma só instância**: abrir o Nodar outra vez traz a janela existente para a frente.
 - Opção para mostrar ou esconder dispositivos offline.
 
 ### Exportação e relatórios
@@ -150,7 +153,7 @@ src/Nodar.App/                       # Interface (Avalonia, MVVM)
 ├── Views/MainWindow.axaml           # Janela principal e as quatro vistas
 ├── ViewModels/                      # Estado e comandos da interface
 ├── Styles/                          # Tema (cores, sombras), estilos dos controlos e ícones
-└── Services/                        # Diálogos/área de transferência e modo demonstração
+└── Services/                        # Bandeja e notificações, instância única, arranque com o Windows, demonstração
 
 src/Nodar.Core/                      # Lógica, sem interface gráfica
 ├── Models/NetworkModels.cs          # Modelos (dispositivo, rede, histórico, scan)
@@ -202,7 +205,7 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 - A deteção de SO é **heurística** e pode falhar, sobretudo com dispositivos IoT.
 - A verificação de vulnerabilidades depende do banner. Muitos dispositivos (routers, câmaras, IoT) não anunciam versão. Uma correspondência por versão **não confirma** que o dispositivo está vulnerável. Não substitui uma auditoria de segurança a sério.
 - As descrições dos CVEs vêm da NVD, em inglês.
-- Os avisos (dispositivo novo, entrada e saída de um monitorizado) só aparecem com a app aberta. Ainda não há notificações do Windows nem execução em segundo plano.
+- Os avisos dependem da atualização automática: com ela desligada, o Nodar na bandeja não volta a analisar a rede sozinho.
 
 ---
 
@@ -214,7 +217,7 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 - [ ] Versão do firmware do router (páginas de administração, TR-069)
 - [ ] Ligar à interface o scanner avançado, o traceroute e os perfis de timing
 - [x] Interface moderna (Avalonia) e lógica separada em `Nodar.Core`
-- [ ] Notificações do Windows e monitorização em segundo plano (bandeja do sistema)
+- [x] Notificações do Windows e monitorização em segundo plano (bandeja do sistema)
 - [ ] Nomes personalizados e "dispositivos de confiança"
 - [x] Identificação por Bonjour/mDNS e registo de fabricantes do IEEE
 - [x] Identificação por SSDP/UPnP e NetBIOS
