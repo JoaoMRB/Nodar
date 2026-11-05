@@ -2,20 +2,27 @@
 
 > Descobre quem está ligado à tua rede local, identifica cada dispositivo e avisa-te quando aparece alguém novo.
 
-Aplicação nativa para Windows, feita em C# / .NET 9 (WinForms). Analisa a tua LAN e mostra cada dispositivo com IP, MAC, fabricante, hostname, tipo, sistema operativo provável e serviços expostos. Guarda o histórico de quem entrou e saiu da rede.
+Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https://avaloniaui.net/). Analisa a tua LAN e mostra cada dispositivo com IP, MAC, fabricante, hostname, tipo, sistema operativo provável, serviços expostos e vulnerabilidades conhecidas. Guarda o histórico de quem entrou e saiu da rede.
 
-> **Estado:** em desenvolvimento ativo. A interface e as funcionalidades ainda vão mudar bastante.
+> **Estado:** em desenvolvimento ativo.
 
 ---
 
 ## Funcionalidades
+
+### Interface
+- Escura e translúcida (Acrylic/Mica no Windows 11), com barra lateral e quatro vistas: **Dispositivos**, **Segurança**, **Histórico** e **Monitorizados**.
+- Lista de dispositivos com ícone e cor por tipo, selos (*Router*, *Este PC*, *Novo*), portas abertas e vulnerabilidades. Tem pesquisa por nome, IP, MAC ou fabricante.
+- Painel de detalhes com a informação do dispositivo, os serviços e o estado da verificação de cada um, as vulnerabilidades (CVSS, exploração ativa, ligação à NVD) e a atividade.
+- Opções de análise num painel próprio. As preferências ficam guardadas.
+- Notificações discretas dentro da app, sem caixas de diálogo a interromper.
 
 ### Descoberta de dispositivos
 - Deteção automática da rede local: interface, IP, máscara, gateway e intervalo da sub-rede. Ignora adaptadores virtuais (VPN, Hyper-V, VirtualBox…).
 - Descoberta por **ARP** através da API nativa do Windows (`SendARP` / `iphlpapi.dll`), com ping como alternativa.
 - **Scan profundo** opcional, que percorre toda a sub-rede.
 - Resolução de **hostname** por DNS reverso.
-- Identificação do **fabricante** pelo prefixo do MAC (OUI) e classificação automática do **tipo de dispositivo**.
+- Identificação do **fabricante** pelo prefixo do MAC (OUI) e classificação do **tipo de dispositivo** pelo fabricante e pelo hostname: router, computador, telemóvel, TV, impressora, consola, câmara, servidor…
 - Marca o dispositivo que corresponde a este PC.
 
 ### Análise
@@ -25,10 +32,10 @@ Aplicação nativa para Windows, feita em C# / .NET 9 (WinForms). Analisa a tua 
 - **Verificação de vulnerabilidades conhecidas** com dados oficiais da [NVD](https://nvd.nist.gov/) (NIST) e do catálogo [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog). Ver [Como funciona a verificação de vulnerabilidades](#como-funciona-a-verificação-de-vulnerabilidades).
 
 ### Monitorização
-- **Histórico persistente** de cada dispositivo: quando foi visto pela primeira vez, entradas e saídas da rede.
-- **Lista de monitorização**: escolhes os dispositivos a vigiar e recebes notificação quando entram ou saem.
-- **Notificação de dispositivo novo**: alerta na bandeja do sistema quando aparece um dispositivo desconhecido.
-- **Atualização automática** com intervalo configurável.
+- **Histórico persistente** de cada dispositivo: quando foi visto pela primeira vez e quando entrou e saiu da rede. Os dispositivos são identificados pelo MAC, por isso uma mudança de IP por DHCP não cria um dispositivo "novo".
+- **Dispositivos novos**: aviso quando aparece um dispositivo que nunca tinha sido visto. O primeiro scan conta como linha de base.
+- **Monitorizados**: tocas na estrela de um dispositivo e recebes um aviso quando ele entra ou sai. Para evitar falsos alarmes com telemóveis em repouso, um dispositivo só é dado como saído depois de falhar dois scans seguidos.
+- **Atualização automática** com intervalo configurável (1 a 15 minutos).
 - Opção para mostrar ou esconder dispositivos offline.
 
 ### Exportação e relatórios
@@ -36,10 +43,10 @@ Aplicação nativa para Windows, feita em C# / .NET 9 (WinForms). Analisa a tua 
 - **Relatório de auditoria** em **HTML**, **JSON** ou **Markdown**.
 
 ### Em desenvolvimento
-O código destas partes já existe, mas ainda não está ligado à interface nem ao scan:
+O código destas partes já existe em `Nodar.Core`, mas ainda não está ligado à interface nem ao scan:
 - Scanner de portas avançado (modos SYN / FIN / XMAS / NULL / ACK)
 - Traceroute com análise de rota
-- Perfis de velocidade do scan (de *Paranoid* a *Insane*). O seletor já aparece na interface, mas ainda não tem efeito.
+- Perfis de velocidade do scan (de *Paranoid* a *Insane*)
 
 ---
 
@@ -60,7 +67,7 @@ Descarrega o `.exe` da página de [Releases](../../releases). É um ficheiro ún
 ```bash
 git clone <url-do-repositório>
 cd <pasta-do-repositório>
-dotnet run --project NetworkScanner/NetworkScanner.csproj
+dotnet run --project src/Nodar.App
 ```
 Também podes usar o [`run.bat`](run.bat).
 
@@ -68,9 +75,13 @@ Também podes usar o [`run.bat`](run.bat).
 ```bash
 build.bat
 ```
-Gera um executável único e self-contained em `dist/Nodar.exe`.
+Gera um executável único e self-contained em `dist/Nodar.exe`. O [`Abrir Nodar.bat`](Abrir%20Nodar.bat) abre-o e, se ainda não existir, gera-o primeiro.
 
----
+### Modo demonstração
+```bash
+dist\Nodar.exe --demo
+```
+Mostra uma rede fictícia com serviços desatualizados, para veres a interface com vulnerabilidades sem precisares de uma rede vulnerável. Os dispositivos são inventados, mas os serviços são verificados na NVD real, por isso os CVEs são verdadeiros para essas versões. Usa uma pasta temporária e não mexe no teu histórico.
 
 ### Testes
 ```bash
@@ -110,11 +121,16 @@ Sem chave, a NVD limita a 5 pedidos por 30 segundos, e a primeira consulta de ca
 ## Estrutura do projeto
 
 ```
-NetworkScanner/
-├── Program.cs                       # Ponto de entrada
-├── MainForm.cs                      # Interface principal
+src/Nodar.App/                       # Interface (Avalonia, MVVM)
+├── Views/MainWindow.axaml           # Janela principal e as quatro vistas
+├── ViewModels/                      # Estado e comandos da interface
+├── Styles/                          # Tema (cores, sombras), estilos dos controlos e ícones
+└── Services/                        # Diálogos/área de transferência e modo demonstração
+
+src/Nodar.Core/                      # Lógica, sem interface gráfica
 ├── Models/NetworkModels.cs          # Modelos (dispositivo, rede, histórico, scan)
-├── UI/Theme.cs                      # Tema escuro e componentes visuais
+├── Monitoring/DeviceTracker.cs      # Histórico, dispositivos novos e monitorizados
+├── Settings/AppSettings.cs          # Preferências
 └── Services/
     ├── NetworkDiscoveryService.cs   # Deteção da rede, ARP, ping, DNS
     ├── VendorService.cs             # Base OUI (fabricante) e tipo de dispositivo
@@ -140,7 +156,7 @@ tests/Nodar.Tests/                   # Testes (xUnit), com respostas reais da NV
 archive/python-web/                  # Protótipo web original em Python (não é mantido)
 ```
 
-Os dados locais (histórico, lista de monitorização e cache de vulnerabilidades) ficam em `%LOCALAPPDATA%\Nodar\`.
+Os dados locais (histórico, lista de monitorização, preferências e cache de vulnerabilidades) ficam em `%LOCALAPPDATA%\Nodar\`.
 
 ---
 
@@ -151,6 +167,7 @@ Os dados locais (histórico, lista de monitorização e cache de vulnerabilidade
 - A deteção de SO é **heurística** e pode falhar, sobretudo com dispositivos IoT.
 - A verificação de vulnerabilidades depende do banner. Muitos dispositivos (routers, câmaras, IoT) não anunciam versão. Uma correspondência por versão **não confirma** que o dispositivo está vulnerável. Não substitui uma auditoria de segurança a sério.
 - As descrições dos CVEs vêm da NVD, em inglês.
+- Os avisos (dispositivo novo, entrada e saída de um monitorizado) só aparecem com a app aberta. Ainda não há notificações do Windows nem execução em segundo plano.
 
 ---
 
@@ -160,11 +177,12 @@ Os dados locais (histórico, lista de monitorização e cache de vulnerabilidade
 - [x] Ler banners HTTPS/TLS e incluir o gateway na análise
 - [ ] Identificar o firmware do router (modelo e versão) por UPnP/SSDP e páginas de login
 - [ ] Ligar à interface o scanner avançado, o traceroute e os perfis de timing
-- [ ] Monitorização em segundo plano (minimizado para a bandeja / serviço)
+- [x] Interface moderna (Avalonia) e lógica separada em `Nodar.Core`
+- [ ] Notificações do Windows e monitorização em segundo plano (bandeja do sistema)
 - [ ] Nomes personalizados e "dispositivos de confiança"
 - [ ] Deteção por mDNS / NetBIOS / SSDP para identificar melhor os dispositivos
-- [ ] Separar a `MainForm` em componentes mais pequenos
-- [ ] Alargar os testes automatizados ao resto da aplicação (há testes para a verificação de vulnerabilidades)
+- [ ] Ícone da aplicação e screenshots no README
+- [ ] Testes dos ViewModels da interface (o Core já tem 155 testes)
 
 ---
 
