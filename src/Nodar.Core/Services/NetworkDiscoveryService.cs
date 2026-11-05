@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Nodar.Core.Models;
+using static Nodar.Core.Localization.Loc;
 using Nodar.Core.Services;
 
 namespace Nodar.Core.Services;
@@ -79,7 +80,7 @@ public static class NetworkDiscoveryService
         {
             return new ScanResult
             {
-                Error = "Não foi possível detetar a rede local. Verifica a ligação Wi-Fi/Ethernet.",
+                Error = T("scan.error.noNetwork"),
                 Duration = stopwatch.Elapsed
             };
         }
@@ -88,7 +89,7 @@ public static class NetworkDiscoveryService
         options.Progress?.Report(new ScanProgress
         {
             Percent = 5,
-            Message = $"A procurar dispositivos em {Math.Min(rangeSize, options.DeepScan ? int.MaxValue : NeighborDiscovery.FullSweepLimit)} endereços (ARP)...",
+            Message = F("scan.progress.arp", Math.Min(rangeSize, options.DeepScan ? int.MaxValue : NeighborDiscovery.FullSweepLimit)),
             DevicesFound = 0
         });
 
@@ -98,7 +99,7 @@ public static class NetworkDiscoveryService
         // Presença decidida por ARP, sem exigir ping (iPhones, Macs e muitos outros ignoram ping).
         var neighbors = await NeighborDiscovery.DiscoverAsync(network, options.DeepScan, options.CancellationToken);
         var discovered = neighbors.Devices;
-        var method = neighbors.PartialSweep ? $"ARP ({neighbors.AddressesSwept} endereços mais próximos)" : "ARP";
+        var method = neighbors.PartialSweep ? F("scan.method.partial", neighbors.AddressesSwept) : "ARP";
 
         if (!string.IsNullOrWhiteSpace(network.Gateway) && !discovered.ContainsKey(network.Gateway))
         {
@@ -117,7 +118,7 @@ public static class NetworkDiscoveryService
         // Bonjour/mDNS: nome e modelo de Macs, iPhones, iPads, Chromecast, impressoras… (identifica
         // dispositivos com MAC privado, onde o fabricante não se sabe pelo MAC).
         // SSDP/UPnP: TVs, boxes, consolas e routers (nome, fabricante, modelo). NetBIOS: nome de PCs Windows.
-        options.Progress?.Report(new ScanProgress { Percent = 20, Message = "A identificar dispositivos (Bonjour, UPnP, NetBIOS)…", DevicesFound = total });
+        options.Progress?.Report(new ScanProgress { Percent = 20, Message = T("scan.progress.identify"), DevicesFound = total });
         var ipList = discovered.Keys.ToList();
         var ipSet = ipList.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var mdnsTask = MdnsProbe.QueryAsync(ipList, options.CancellationToken);
@@ -136,7 +137,7 @@ public static class NetworkDiscoveryService
         options.Progress?.Report(new ScanProgress
         {
             Percent = 30,
-            Message = $"{total} dispositivos encontrados · a identificar…",
+            Message = F("scan.progress.found", total),
             DevicesFound = total
         });
 
@@ -153,7 +154,7 @@ public static class NetworkDiscoveryService
                 options.Progress?.Report(new ScanProgress
                 {
                     Percent = 30 + (int)(done / (double)Math.Max(total, 1) * 65),
-                    Message = $"A identificar dispositivos ({done}/{total})…",
+                    Message = F("scan.progress.analyzing", done, total),
                     DevicesFound = total
                 });
             });
@@ -169,7 +170,7 @@ public static class NetworkDiscoveryService
         options.Progress?.Report(new ScanProgress
         {
             Percent = 100,
-            Message = "Análise concluída",
+            Message = T("scan.progress.done"),
             DevicesFound = devices.Count
         });
 

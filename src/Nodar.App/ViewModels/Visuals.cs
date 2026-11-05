@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Media;
+using Nodar.Core.Services;
+using static Nodar.Core.Localization.Loc;
 
 namespace Nodar.App.ViewModels;
 
@@ -58,12 +60,27 @@ public static class Visuals
 
     public static string SeverityLabel(string severity) => severity switch
     {
-        "Critical" => "Crítica",
-        "High" => "Alta",
-        "Medium" => "Média",
-        "Low" => "Baixa",
-        "None" => "Nenhuma",
-        _ => "Sem pontuação"
+        "Critical" or "High" or "Medium" or "Low" or "None" => T("severity." + severity),
+        _ => T("severity.Unknown")
+    };
+
+    /// <summary>Tipos de dispositivo do Core (guardados no histórico em português) → texto no idioma atual.</summary>
+    public static string TypeLabel(string type) => Nodar.Core.Localization.Loc.DeviceType(type);
+
+    /// <summary>Fabricantes "sentinela" do Core (desconhecido, endereço privado, router) → texto no idioma atual.</summary>
+    public static bool IsUnknownVendor(string? vendor) =>
+        string.IsNullOrWhiteSpace(vendor) || vendor is "Desconhecido" or "Router/Gateway";
+
+    public static string VendorLabel(string? vendor) => ExportService.VendorText(vendor);
+
+    /// <summary>Confiança da deteção de SO (valores do Core em português).</summary>
+    public static string ConfidenceLabel(string? confidence) => confidence switch
+    {
+        "Muito Alta" => T("confidence.veryHigh"),
+        "Alta" => T("confidence.high"),
+        "Média" => T("confidence.medium"),
+        "Baixa" => T("confidence.low"),
+        _ => (confidence ?? "").ToLowerInvariant()
     };
 
     public static int SeverityRank(string severity) => severity switch
@@ -78,16 +95,16 @@ public static class Visuals
     public static readonly IBrush OnlineBrush = Brush("#34D399");
     public static readonly IBrush OfflineBrush = Brush("#6B7180");
 
-    /// <summary>"agora", "há 5 min", "há 3 h", "há 2 d", "12/10/2026".</summary>
+    /// <summary>"agora" / "now", "há 5 min" / "5 min ago", …, ou a data.</summary>
     public static string Relative(DateTime? when, DateTime? now = null)
     {
         if (when == null)
             return "—";
         var delta = (now ?? DateTime.Now) - when.Value;
-        if (delta.TotalSeconds < 60) return "agora";
-        if (delta.TotalMinutes < 60) return $"há {(int)delta.TotalMinutes} min";
-        if (delta.TotalHours < 24) return $"há {(int)delta.TotalHours} h";
-        if (delta.TotalDays < 30) return $"há {(int)delta.TotalDays} d";
-        return when.Value.ToString("dd/MM/yyyy");
+        if (delta.TotalSeconds < 60) return T("time.now");
+        if (delta.TotalMinutes < 60) return F("time.minutesAgo", (int)delta.TotalMinutes);
+        if (delta.TotalHours < 24) return F("time.hoursAgo", (int)delta.TotalHours);
+        if (delta.TotalDays < 30) return F("time.daysAgo", (int)delta.TotalDays);
+        return when.Value.ToString("d", Instance.Culture);
     }
 }

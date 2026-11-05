@@ -1,4 +1,5 @@
 using Nodar.Core.Models;
+using static Nodar.Core.Localization.Loc;
 using Nodar.Core.Services.Vulnerabilities;
 
 namespace Nodar.App.Services;
@@ -38,7 +39,7 @@ public static class DemoData
 
     public static async Task<ScanResult> BuildAsync(IProgress<ScanProgress>? progress, CancellationToken ct)
     {
-        progress?.Report(new ScanProgress { Percent = 20, Message = "Modo demonstração: a preparar rede fictícia…" });
+        progress?.Report(new ScanProgress { Percent = 20, Message = T("demo.progress.preparing") });
 
         static ServiceInfo Svc(int port, string service, string key = "", string product = "", string version = "", string distro = "") => new()
         {
@@ -50,19 +51,19 @@ public static class DemoData
         {
             (new DeviceInfo { IpAddress = "192.168.1.1", MacAddress = "D0:CF:0E:00:00:01", Hostname = "router", Model = "TP-Link Archer AX55", Vendor = "TP-Link", DeviceType = "Router", OpenPorts = "53, 80, 443, 49152" },
              [Svc(53, "DNS", "dnsmasq", "dnsmasq", "2.78"), Svc(80, "HTTP", "lighttpd", "lighttpd", "1.4.45"), Svc(49152, "UPnP", "miniupnpd", "MiniUPnPd", "1.9")]),
-            (new DeviceInfo { IpAddress = "192.168.1.23", MacAddress = "3C:22:FB:10:4A:01", Hostname = "MacBook-Pro-da-Ana.local", FriendlyName = "MacBook Pro da Ana", Model = "MacBook Pro", ModelId = "MacBookPro18,3", Vendor = "Apple", DeviceType = "Computador", IsLocalDevice = true, OpenPorts = "" }, []),
+            (new DeviceInfo { IpAddress = "192.168.1.23", MacAddress = "3C:22:FB:10:4A:01", Hostname = "MacBook-Pro-da-Ana.local", FriendlyName = T("demo.name.macbook"), Model = "MacBook Pro", ModelId = "MacBookPro18,3", Vendor = "Apple", DeviceType = "Computador", IsLocalDevice = true, OpenPorts = "" }, []),
             (new DeviceInfo { IpAddress = "192.168.1.40", MacAddress = "DC:A6:32:7B:00:12", Hostname = "homelab", Vendor = "Raspberry Pi", DeviceType = "Servidor", OpenPorts = "22, 80, 6379" },
              [Svc(22, "SSH", "openssh", "OpenSSH", "8.9p1", "Ubuntu"), Svc(80, "HTTP", "nginx", "nginx", "1.18.0", "Ubuntu"), Svc(6379, "Redis", "redis", "Redis", "6.0.16")]),
             (new DeviceInfo { IpAddress = "192.168.1.52", MacAddress = "00:11:32:AB:CD:EF", Hostname = "nas", Vendor = "Synology", DeviceType = "Servidor", OpenPorts = "21, 443" },
              [Svc(21, "FTP", "proftpd", "ProFTPD", "1.3.5"), Svc(443, "HTTPS", "nginx", "nginx", "1.20.1")]),
-            (new DeviceInfo { IpAddress = "192.168.1.61", MacAddress = "F4:F5:D8:00:11:22", Hostname = "GoogleTV-sala", FriendlyName = "TV da Sala", Model = "Chromecast com Google TV", Vendor = "Google", DeviceType = "TV", OpenPorts = "8008" }, []),
-            (new DeviceInfo { IpAddress = "192.168.1.77", MacAddress = "64:EB:8C:33:44:55", Hostname = "EPSON-escritorio", FriendlyName = "Impressora do escritório", Model = "Epson ET-2850 Series", Vendor = "Epson", DeviceType = "Impressora", OpenPorts = "80, 631" },
+            (new DeviceInfo { IpAddress = "192.168.1.61", MacAddress = "F4:F5:D8:00:11:22", Hostname = "GoogleTV-sala", FriendlyName = T("demo.name.tv"), Model = T("demo.model.chromecast"), Vendor = "Google", DeviceType = "TV", OpenPorts = "8008" }, []),
+            (new DeviceInfo { IpAddress = "192.168.1.77", MacAddress = "64:EB:8C:33:44:55", Hostname = "EPSON-escritorio", FriendlyName = T("demo.name.printer"), Model = "Epson ET-2850 Series", Vendor = "Epson", DeviceType = "Impressora", OpenPorts = "80, 631" },
              [Svc(80, "HTTP")]),
-            (new DeviceInfo { IpAddress = "192.168.1.88", MacAddress = "A4:83:E7:66:77:88", Hostname = "iPhone-do-Rui.local", FriendlyName = "iPhone do Rui", Model = "iPhone", ModelId = "iPhone16,1", Vendor = "Apple", DeviceType = "Apple", OpenPorts = "" }, []),
+            (new DeviceInfo { IpAddress = "192.168.1.88", MacAddress = "A4:83:E7:66:77:88", Hostname = "iPhone-do-Rui.local", FriendlyName = T("demo.name.iphone"), Model = "iPhone", ModelId = "iPhone16,1", Vendor = "Apple", DeviceType = "Apple", OpenPorts = "" }, []),
             (new DeviceInfo { IpAddress = "192.168.1.95", MacAddress = "7C:BB:8A:99:00:11", Hostname = "PS5", Vendor = "Sony", DeviceType = "Consola", OpenPorts = "" }, []),
         };
 
-        progress?.Report(new ScanProgress { Percent = 50, Message = "Modo demonstração: a verificar serviços na NVD…" });
+        progress?.Report(new ScanProgress { Percent = 50, Message = T("demo.progress.checking") });
         var vulnerabilityService = new VulnerabilityService();
         var devices = new List<DeviceInfo>();
         foreach (var (device, services) in specs)
@@ -78,12 +79,12 @@ public static class DemoData
             });
         }
 
-        progress?.Report(new ScanProgress { Percent = 100, Message = "Concluído" });
+        progress?.Report(new ScanProgress { Percent = 100, Message = T("scan.progress.done") });
         return new ScanResult
         {
             Network = Network,
             Devices = devices,
-            ScanMethod = "Demonstração",
+            ScanMethod = T("demo.badge"),
             VulnerabilitySourceNote = vulnerabilityService.BuildSourceNote()
         };
     }

@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Nodar.App.ViewModels"
+        xmlns:l="using:Nodar.App.Localization"
         x:Class="Nodar.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Nodar"
@@ -64,15 +65,15 @@
             </Border>
             <StackPanel VerticalAlignment="Center" Spacing="1">
               <TextBlock Text="Nodar" FontSize="16" FontWeight="SemiBold" LetterSpacing="-0.2" />
-              <TextBlock Classes="caption" Text="Rede local" FontSize="11.5" />
+              <TextBlock Classes="caption" Text="{l:T brand.subtitle}" FontSize="11.5" />
             </StackPanel>
           </StackPanel>
 
           <Border DockPanel.Dock="Top" Classes="chip" Background="#26FBBF24" HorizontalAlignment="Left" Margin="6,-14,0,22" IsVisible="{Binding IsDemo}"
-                  ToolTip.Tip="Rede fictícia para demonstração. Os CVEs vêm da NVD real.">
+                  ToolTip.Tip="{l:T demo.tooltip}">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <Path Classes="icon sm" Data="{StaticResource Icon.Sparkle}" Stroke="{StaticResource WarningBrush}" />
-              <TextBlock Text="Modo demonstração" Foreground="{StaticResource WarningBrush}" />
+              <TextBlock Text="{l:T demo.badge}" Foreground="{StaticResource WarningBrush}" />
             </StackPanel>
           </Border>
 
@@ -87,18 +88,18 @@
                 <TextBlock Classes="h3" Text="{Binding InterfaceName}" />
               </StackPanel>
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
-                <TextBlock Grid.Row="0" Classes="caption tertiary" Text="Este PC" Margin="0,0,12,4" />
+                <TextBlock Grid.Row="0" Classes="caption tertiary" Text="{l:T net.thisPc}" Margin="0,0,12,4" />
                 <TextBlock Grid.Row="0" Grid.Column="1" Classes="mono" Text="{Binding LocalIp}" HorizontalAlignment="Right" />
-                <TextBlock Grid.Row="1" Classes="caption tertiary" Text="Router" Margin="0,0,12,4" />
+                <TextBlock Grid.Row="1" Classes="caption tertiary" Text="{l:T net.router}" Margin="0,0,12,4" />
                 <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding Gateway}" HorizontalAlignment="Right" />
-                <TextBlock Grid.Row="2" Classes="caption tertiary" Text="Rede" Margin="0,0,12,0" />
+                <TextBlock Grid.Row="2" Classes="caption tertiary" Text="{l:T net.network}" Margin="0,0,12,0" />
                 <TextBlock Grid.Row="2" Grid.Column="1" Classes="mono" Text="{Binding NetworkRange}" HorizontalAlignment="Right" />
               </Grid>
               <Border Classes="chip" Background="#1AFBBF24" HorizontalAlignment="Left" IsVisible="{Binding ShowAdminHint}"
-                      ToolTip.Tip="Como administrador, a descoberta ARP e algumas análises ficam mais completas.">
+                      ToolTip.Tip="{l:T admin.tooltip}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <Path Classes="icon sm" Data="{StaticResource Icon.Alert}" Stroke="{StaticResource WarningBrush}" />
-                  <TextBlock Text="Sem privilégios de admin" Foreground="{StaticResource WarningBrush}" />
+                  <TextBlock Text="{l:T admin.badge}" Foreground="{StaticResource WarningBrush}" />
                 </StackPanel>
               </Border>
             </StackPanel>
@@ -106,13 +107,13 @@
 
           <!-- Navegação -->
           <StackPanel Spacing="4">
-            <TextBlock Classes="overline" Text="VISTA" Margin="12,0,0,8" />
+            <TextBlock Classes="overline" Text="{l:T nav.section}" Margin="12,0,0,8" />
 
             <Button Classes="nav" Classes.active="{Binding IsDevicesPage}"
                     Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Devices}">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Grid}" />
-                <TextBlock Grid.Column="1" Text="Dispositivos" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                <TextBlock Grid.Column="1" Text="{l:T nav.devices}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
                 <Border Grid.Column="2" Classes="chip" Padding="7,1" IsVisible="{Binding HasScanned}">
                   <TextBlock Text="{Binding OnlineCount}" Foreground="{StaticResource TextSecondaryBrush}" />
                 </Border>
@@ -123,7 +124,7 @@
                     Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Security}">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Shield}" />
-                <TextBlock Grid.Column="1" Text="Segurança" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                <TextBlock Grid.Column="1" Text="{l:T nav.security}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
                 <Border Grid.Column="2" Classes="chip" Padding="7,1" Background="#26FF4D6D" IsVisible="{Binding HasVulnerabilityData}">
                   <TextBlock Text="{Binding VulnerabilityCount}" Foreground="{StaticResource CriticalBrush}" />
                 </Border>
@@ -134,7 +135,7 @@
                     Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.History}">
               <Grid ColumnDefinitions="Auto,*">
                 <Path Classes="icon" Data="{StaticResource Icon.Clock}" />
-                <TextBlock Grid.Column="1" Text="Histórico" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                <TextBlock Grid.Column="1" Text="{l:T nav.history}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
               </Grid>
             </Button>
 
@@ -142,7 +143,7 @@
                     Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Watchlist}">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Eye}" />
-                <TextBlock Grid.Column="1" Text="Monitorizados" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                <TextBlock Grid.Column="1" Text="{l:T nav.watchlist}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
                 <Border Grid.Column="2" Classes="chip" Padding="7,1" IsVisible="{Binding HasWatchItems}">
                   <TextBlock Text="{Binding WatchItems.Count}" Foreground="{StaticResource TextSecondaryBrush}" />
                 </Border>
@@ -164,81 +165,87 @@
 
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
             <Panel Width="260" IsVisible="{Binding IsDevicesPage}">
-              <TextBox Classes="search" Watermark="Procurar dispositivos…" Text="{Binding SearchText}" />
+              <TextBox Classes="search" Watermark="{l:T search.watermark}" Text="{Binding SearchText}" />
               <Path Classes="icon sm" Data="{StaticResource Icon.Search}" Stroke="{StaticResource TextTertiaryBrush}"
                     HorizontalAlignment="Left" Margin="13,0,0,0" IsHitTestVisible="False" />
             </Panel>
 
             <!-- Opções de análise -->
-            <Button Classes="ghost icon" ToolTip.Tip="Opções de análise">
+            <Button Classes="ghost icon" ToolTip.Tip="{l:T options.title}">
               <Path Classes="icon" Data="{StaticResource Icon.Sliders}" />
               <Button.Flyout>
                 <Flyout Placement="BottomEdgeAlignedRight">
                   <StackPanel Width="360" Margin="18" Spacing="14">
                     <StackPanel Spacing="2">
-                      <TextBlock Classes="h2" Text="Opções de análise" />
+                      <TextBlock Classes="h2" Text="{l:T options.title}" />
                       <TextBlock Classes="caption" Text="{Binding ScanModeSummary}" />
                     </StackPanel>
 
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Sub-rede completa" />
-                        <TextBlock Classes="caption" Text="Só para redes grandes (mais de 1024 endereços); as outras são sempre varridas por inteiro" TextWrapping="Wrap" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.deep}" />
+                        <TextBlock Classes="caption" Text="{l:T options.deep.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding DeepScan}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Portas abertas" />
-                        <TextBlock Classes="caption" Text="Portas TCP mais comuns, incluindo as de routers" TextWrapping="Wrap" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.ports}" />
+                        <TextBlock Classes="caption" Text="{l:T options.ports.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding PortScan}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Serviços e versões" />
-                        <TextBlock Classes="caption" Text="Lê banners (SSH, HTTP/HTTPS, FTP, DNS…)" TextWrapping="Wrap" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.services}" />
+                        <TextBlock Classes="caption" Text="{l:T options.services.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding ServiceDetection}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Vulnerabilidades" />
-                        <TextBlock Classes="caption" Text="NVD e CISA KEV; só o nome do produto sai do PC" TextWrapping="Wrap" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.vulns}" />
+                        <TextBlock Classes="caption" Text="{l:T options.vulns.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding VulnerabilityScan}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Sistema operativo" />
-                        <TextBlock Classes="caption" Text="Estimativa por fingerprint TCP/IP" TextWrapping="Wrap" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.os}" />
+                        <TextBlock Classes="caption" Text="{l:T options.os.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding OsDetection}" />
                     </Grid>
 
                     <Border Classes="divider" />
 
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Atualização automática" />
-                        <TextBlock Classes="caption" Text="Volta a analisar em segundo plano" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.autoRefresh}" />
+                        <TextBlock Classes="caption" Text="{l:T options.autoRefresh.hint}" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoRefresh}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AutoRefresh}">
-                      <TextBlock Classes="caption" Text="Intervalo" VerticalAlignment="Center" />
+                      <TextBlock Classes="caption" Text="{l:T options.interval}" VerticalAlignment="Center" />
                       <ComboBox Grid.Column="1" MinWidth="140" ItemsSource="{Binding IntervalOptions}" SelectedItem="{Binding SelectedInterval}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Mostrar offline" />
-                        <TextBlock Classes="caption" Text="Dispositivos conhecidos que não estão ligados" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.showOffline}" />
+                        <TextBlock Classes="caption" Text="{l:T options.showOffline.hint}" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowOffline}" />
                     </Grid>
 
                     <Border Classes="divider" />
-                    <TextBlock Classes="overline" Text="SEGUNDO PLANO" />
+                    <TextBlock Classes="overline" Text="{l:T options.background}" />
 
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Notificações do Windows" />
-                        <TextBlock Classes="caption" Text="Dispositivos novos e monitorizados, quando a janela não está à vista" TextWrapping="Wrap" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.notifications}" />
+                        <TextBlock Classes="caption" Text="{l:T options.notifications.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding WindowsNotifications}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Continuar na bandeja ao fechar" />
-                        <TextBlock Classes="caption" Text="Fechar a janela não para a vigilância; para sair, usa o ícone" TextWrapping="Wrap" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.closeToTray}" />
+                        <TextBlock Classes="caption" Text="{l:T options.closeToTray.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding CloseToTray}" />
                     </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.language}" />
+                        <TextBlock Classes="caption" Text="{l:T options.language.hint}" TextWrapping="Wrap" /></StackPanel>
+                      <ComboBox Grid.Column="1" MinWidth="150" VerticalAlignment="Center"
+                                ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding SelectedLanguage}" />
+                    </Grid>
                     <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CanStartWithWindows}">
-                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Iniciar com o Windows" />
-                        <TextBlock Classes="caption" Text="Arranca minimizado na bandeja" TextWrapping="Wrap" /></StackPanel>
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.startWithWindows}" />
+                        <TextBlock Classes="caption" Text="{l:T options.startWithWindows.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartWithWindows}" />
                     </Grid>
                   </StackPanel>
@@ -247,15 +254,15 @@
             </Button>
 
             <!-- Exportar -->
-            <Button Classes="ghost icon" ToolTip.Tip="Exportar" IsEnabled="{Binding HasScanned}">
+            <Button Classes="ghost icon" ToolTip.Tip="{l:T export.tooltip}" IsEnabled="{Binding HasScanned}">
               <Path Classes="icon" Data="{StaticResource Icon.Download}" />
               <Button.Flyout>
                 <MenuFlyout Placement="BottomEdgeAlignedRight">
-                  <MenuItem Header="Lista de dispositivos (CSV)" Command="{Binding ExportCsvCommand}" />
+                  <MenuItem Header="{l:T export.csv}" Command="{Binding ExportCsvCommand}" />
                   <Separator />
-                  <MenuItem Header="Relatório HTML" Command="{Binding ExportReportCommand}" CommandParameter="html" />
-                  <MenuItem Header="Relatório Markdown" Command="{Binding ExportReportCommand}" CommandParameter="md" />
-                  <MenuItem Header="Relatório JSON" Command="{Binding ExportReportCommand}" CommandParameter="json" />
+                  <MenuItem Header="{l:T export.html}" Command="{Binding ExportReportCommand}" CommandParameter="html" />
+                  <MenuItem Header="{l:T export.md}" Command="{Binding ExportReportCommand}" CommandParameter="md" />
+                  <MenuItem Header="{l:T export.json}" Command="{Binding ExportReportCommand}" CommandParameter="json" />
                 </MenuFlyout>
               </Button.Flyout>
             </Button>
@@ -264,15 +271,15 @@
             <Button Classes="primary" Command="{Binding ScanCommand}" IsVisible="{Binding IsIdle}" MinWidth="128">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <Path Classes="icon" Data="{StaticResource Icon.Radar}" Stroke="White" StrokeThickness="2" />
-                <TextBlock Text="Analisar" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="{l:T scan.button}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
             <Button Classes="ghost" Command="{Binding CancelScanCommand}" IsVisible="{Binding IsScanning}" MinWidth="128"
-                    ToolTip.Tip="Parar a análise">
+                    ToolTip.Tip="{l:T scan.stop.tooltip}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <Path Classes="icon spin" Data="M12 3 A9 9 0 0 1 21 12" Stroke="{StaticResource AccentBrush}" StrokeThickness="2.4" />
                 <TextBlock VerticalAlignment="Center">
-                  <Run Text="A analisar " /><Run Text="{Binding ScanProgress, StringFormat={}{0:0}%}" Foreground="{StaticResource TextSecondaryBrush}" />
+                  <Run Text="{l:T scan.running}" /><Run Text="{Binding ScanProgress, StringFormat={}{0:0}%}" Foreground="{StaticResource TextSecondaryBrush}" />
                 </TextBlock>
               </StackPanel>
             </Button>
@@ -298,7 +305,7 @@
                   <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="7">
                       <Border Width="7" Height="7" CornerRadius="4" Background="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
-                      <TextBlock Classes="caption" Text="Online agora" />
+                      <TextBlock Classes="caption" Text="{l:T stats.online}" />
                     </StackPanel>
                     <TextBlock Classes="stat" Text="{Binding OnlineCount}" />
                   </StackPanel>
@@ -307,7 +314,7 @@
                   <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="7">
                       <Path Classes="icon sm" Data="{StaticResource Icon.Sparkle}" Stroke="#A79CFF" />
-                      <TextBlock Classes="caption" Text="Novos (24 h)" />
+                      <TextBlock Classes="caption" Text="{l:T stats.new}" />
                     </StackPanel>
                     <TextBlock Classes="stat" Text="{Binding NewCount}" />
                   </StackPanel>
@@ -316,7 +323,7 @@
                   <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="7">
                       <Path Classes="icon sm" Data="{StaticResource Icon.Plug}" Stroke="{StaticResource InfoBrush}" />
-                      <TextBlock Classes="caption" Text="Serviços expostos" />
+                      <TextBlock Classes="caption" Text="{l:T stats.services}" />
                     </StackPanel>
                     <TextBlock Classes="stat" Text="{Binding ExposedServiceCount}" />
                   </StackPanel>
@@ -325,7 +332,7 @@
                   <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="7">
                       <Path Classes="icon sm" Data="{StaticResource Icon.Shield}" Stroke="{StaticResource CriticalBrush}" />
-                      <TextBlock Classes="caption" Text="Vulnerabilidades" />
+                      <TextBlock Classes="caption" Text="{l:T options.vulns}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                       <TextBlock Classes="stat" Text="{Binding VulnerabilityCount}" />
@@ -356,13 +363,13 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                               <TextBlock Classes="h3" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" MaxWidth="320" />
                               <Border Classes="chip" Padding="7,1" Background="#267C6CFF" IsVisible="{Binding IsGateway}">
-                                <TextBlock Text="Router" Foreground="#C2BAFF" />
+                                <TextBlock Text="{l:T net.router}" Foreground="#C2BAFF" />
                               </Border>
                               <Border Classes="chip" Padding="7,1" Background="#264C8DFF" IsVisible="{Binding IsLocal}">
-                                <TextBlock Text="Este PC" Foreground="#A9C8FF" />
+                                <TextBlock Text="{l:T net.thisPc}" Foreground="#A9C8FF" />
                               </Border>
                               <Border Classes="chip" Padding="7,1" Background="#2634D399" IsVisible="{Binding IsNew}">
-                                <TextBlock Text="Novo" Foreground="#6EE7B7" />
+                                <TextBlock Text="{l:T badge.new}" Foreground="#6EE7B7" />
                               </Border>
                             </StackPanel>
                             <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
@@ -386,7 +393,7 @@
                           </StackPanel>
 
                           <Button Grid.Column="4" Classes="flat icon" Width="32" Height="32"
-                                  ToolTip.Tip="Vigiar: avisar quando entra ou sai"
+                                  ToolTip.Tip="{l:T watch.tooltip}"
                                   Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleWatchCommand}"
                                   CommandParameter="{Binding}">
                             <Panel>
@@ -403,18 +410,18 @@
                 <!-- Estados vazios -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" IsVisible="{Binding ShowFirstScan}">
                   <Path Classes="icon spin" Data="M12 3 A9 9 0 0 1 21 12" Stroke="{StaticResource AccentBrush}" Width="28" Height="28" StrokeThickness="2.4" />
-                  <TextBlock Classes="h2" Text="A procurar dispositivos…" HorizontalAlignment="Center" />
-                  <TextBlock Classes="caption" Text="A primeira análise demora alguns segundos." HorizontalAlignment="Center" />
+                  <TextBlock Classes="h2" Text="{l:T empty.searching}" HorizontalAlignment="Center" />
+                  <TextBlock Classes="caption" Text="{l:T empty.searching.hint}" HorizontalAlignment="Center" />
                 </StackPanel>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" IsVisible="{Binding NoSearchResults}">
                   <Path Classes="icon xl" Data="{StaticResource Icon.Search}" Stroke="{StaticResource TextTertiaryBrush}" />
-                  <TextBlock Classes="h2" Text="Sem resultados" HorizontalAlignment="Center" />
-                  <TextBlock Classes="caption" Text="Nenhum dispositivo corresponde à pesquisa." HorizontalAlignment="Center" />
+                  <TextBlock Classes="h2" Text="{l:T empty.noResults}" HorizontalAlignment="Center" />
+                  <TextBlock Classes="caption" Text="{l:T empty.noResults.hint}" HorizontalAlignment="Center" />
                 </StackPanel>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" IsVisible="{Binding ShowEmptyState}">
                   <Path Classes="icon xl" Data="{StaticResource Icon.Globe}" Stroke="{StaticResource TextTertiaryBrush}" />
-                  <TextBlock Classes="h2" Text="Nenhum dispositivo encontrado" HorizontalAlignment="Center" />
-                  <TextBlock Classes="caption" Text="Verifica a ligação à rede e tenta outra vez." HorizontalAlignment="Center" />
+                  <TextBlock Classes="h2" Text="{l:T empty.noDevices}" HorizontalAlignment="Center" />
+                  <TextBlock Classes="caption" Text="{l:T empty.noDevices.hint}" HorizontalAlignment="Center" />
                 </StackPanel>
               </Panel>
             </Grid>
@@ -451,14 +458,14 @@
                           <Path Classes="icon sm" Data="{StaticResource Icon.Star}" IsVisible="{Binding !IsWatched}" />
                           <Path Classes="icon sm" Data="{StaticResource Icon.Star}" IsVisible="{Binding IsWatched}" Stroke="{StaticResource WarningBrush}" Fill="{StaticResource WarningBrush}" />
                         </Panel>
-                        <TextBlock Text="A vigiar" IsVisible="{Binding IsWatched}" />
-                        <TextBlock Text="Vigiar" IsVisible="{Binding !IsWatched}" />
+                        <TextBlock Text="{l:T watch.active}" IsVisible="{Binding IsWatched}" />
+                        <TextBlock Text="{l:T watch.action}" IsVisible="{Binding !IsWatched}" />
                       </StackPanel>
                     </Button>
                     <Button Classes="ghost" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CopyCommand}" CommandParameter="{Binding IpAddress}">
                       <StackPanel Orientation="Horizontal" Spacing="7">
                         <Path Classes="icon sm" Data="{StaticResource Icon.Copy}" />
-                        <TextBlock Text="Copiar IP" />
+                        <TextBlock Text="{l:T details.copyIp}" />
                       </StackPanel>
                     </Button>
                   </StackPanel>
@@ -474,29 +481,29 @@
                           <Style Selector="TextBlock.k"><Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" /><Setter Property="Margin" Value="0,9" /><Setter Property="FontSize" Value="12" /></Style>
                           <Style Selector="SelectableTextBlock.v"><Setter Property="Margin" Value="0,9" /><Setter Property="FontSize" Value="12.5" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
                         </Grid.Styles>
-                        <TextBlock Grid.Row="0" Classes="k" Text="Endereço IP" />
+                        <TextBlock Grid.Row="0" Classes="k" Text="{l:T details.ip}" />
                         <SelectableTextBlock Grid.Row="0" Grid.Column="1" Classes="v mono" Text="{Binding IpAddress}" />
                         <TextBlock Grid.Row="1" Classes="k" Text="MAC" />
                         <SelectableTextBlock Grid.Row="1" Grid.Column="1" Classes="v mono" Text="{Binding MacAddress}" />
                         <TextBlock Grid.Row="2" Classes="k" Text="Hostname" />
                         <SelectableTextBlock Grid.Row="2" Grid.Column="1" Classes="v" Text="{Binding Hostname}" />
-                        <TextBlock Grid.Row="3" Classes="k" Text="Fabricante" />
+                        <TextBlock Grid.Row="3" Classes="k" Text="{l:T details.vendor}" />
                         <SelectableTextBlock Grid.Row="3" Grid.Column="1" Classes="v" Text="{Binding Vendor}" />
-                        <TextBlock Grid.Row="4" Classes="k" Text="Modelo" />
+                        <TextBlock Grid.Row="4" Classes="k" Text="{l:T details.model}" />
                         <SelectableTextBlock Grid.Row="4" Grid.Column="1" Classes="v" Text="{Binding Model}" />
-                        <TextBlock Grid.Row="5" Classes="k" Text="Sistema" />
+                        <TextBlock Grid.Row="5" Classes="k" Text="{l:T details.os}" />
                         <SelectableTextBlock Grid.Row="5" Grid.Column="1" Classes="v" Text="{Binding OperatingSystem}" />
-                        <TextBlock Grid.Row="6" Classes="k" Text="Visto pela 1.ª vez" />
+                        <TextBlock Grid.Row="6" Classes="k" Text="{l:T details.firstSeen}" />
                         <SelectableTextBlock Grid.Row="6" Grid.Column="1" Classes="v" Text="{Binding FirstSeen}" />
-                        <TextBlock Grid.Row="7" Classes="k" Text="Última vez" />
+                        <TextBlock Grid.Row="7" Classes="k" Text="{l:T details.lastSeen}" />
                         <SelectableTextBlock Grid.Row="7" Grid.Column="1" Classes="v" Text="{Binding LastSeen}" />
                       </Grid>
                     </Border>
 
                     <!-- Serviços -->
                     <StackPanel Spacing="10">
-                      <TextBlock Classes="overline" Text="SERVIÇOS" />
-                      <TextBlock Classes="caption" Text="Nenhum serviço detetado. Ativa “Portas” e “Serviços” nas opções." TextWrapping="Wrap" IsVisible="{Binding !HasServices}" />
+                      <TextBlock Classes="overline" Text="{l:T details.services}" />
+                      <TextBlock Classes="caption" Text="{l:T details.noServices}" TextWrapping="Wrap" IsVisible="{Binding !HasServices}" />
                       <ItemsControl ItemsSource="{Binding Services}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:ServiceItemViewModel">
@@ -522,12 +529,12 @@
 
                     <!-- Vulnerabilidades -->
                     <StackPanel Spacing="10" IsVisible="{Binding HasVulnerabilities}">
-                      <TextBlock Classes="overline" Text="VULNERABILIDADES POTENCIAIS" />
+                      <TextBlock Classes="overline" Text="{l:T details.vulns}" />
                       <Border Classes="card" Padding="12,10" Background="#14FBBF24" BorderBrush="#33FBBF24" IsVisible="{Binding MayBeBackported}">
                         <Grid ColumnDefinitions="Auto,*">
                           <Path Classes="icon sm" Data="{StaticResource Icon.Info}" Stroke="{StaticResource WarningBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
                           <TextBlock Grid.Column="1" Classes="caption" Margin="10,0,0,0" TextWrapping="Wrap"
-                                     Text="Pacote de distribuição: as correções podem ter sido aplicadas sem mudar a versão. Confirma no próprio sistema." />
+                                     Text="{l:T details.backport}" />
                         </Grid>
                       </Border>
                       <ItemsControl ItemsSource="{Binding Vulnerabilities}">
@@ -564,7 +571,7 @@
 
                     <!-- Histórico -->
                     <StackPanel Spacing="10" IsVisible="{Binding HasEvents}">
-                      <TextBlock Classes="overline" Text="ATIVIDADE" />
+                      <TextBlock Classes="overline" Text="{l:T details.activity}" />
                       <ItemsControl ItemsSource="{Binding Events}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:HistoryEventViewModel">
@@ -590,22 +597,22 @@
             <StackPanel Spacing="18" Margin="32,0,28,24">
               <UniformGrid Columns="4" Margin="-6,0,-6,0" IsVisible="{Binding SecurityChecked}">
                 <Border Classes="card" Margin="6" Padding="16,14">
-                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="Críticas" />
+                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="{l:T security.critical}" />
                     <TextBlock Classes="stat" Text="{Binding CriticalCount}" Foreground="{StaticResource CriticalBrush}" /></StackPanel>
                 </Border>
                 <Border Classes="card" Margin="6" Padding="16,14">
-                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="Altas" />
+                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="{l:T security.high}" />
                     <TextBlock Classes="stat" Text="{Binding HighCount}" Foreground="#FB923C" /></StackPanel>
                 </Border>
                 <Border Classes="card" Margin="6" Padding="16,14">
-                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="Médias e baixas" />
+                  <StackPanel Spacing="6"><TextBlock Classes="caption" Text="{l:T security.mediumLow}" />
                     <TextBlock Classes="stat" Text="{Binding MediumLowCount}" Foreground="{StaticResource WarningBrush}" /></StackPanel>
                 </Border>
                 <Border Classes="card" Margin="6" Padding="16,14">
                   <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <Path Classes="icon sm" Data="{StaticResource Icon.Flame}" Stroke="{StaticResource CriticalBrush}" />
-                      <TextBlock Classes="caption" Text="Exploradas ativamente" /></StackPanel>
+                      <TextBlock Classes="caption" Text="{l:T security.exploited}" /></StackPanel>
                     <TextBlock Classes="stat" Text="{Binding KevCount}" /></StackPanel>
                 </Border>
               </UniformGrid>
@@ -615,7 +622,7 @@
                   <Path Classes="icon" Data="{StaticResource Icon.Info}" Stroke="{StaticResource InfoBrush}" VerticalAlignment="Top" />
                   <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="4">
                     <TextBlock Classes="caption" TextWrapping="Wrap"
-                               Text="Resultados potenciais: correspondência pela versão anunciada pelo serviço, com dados da NVD (NIST) e do catálogo CISA KEV. Configuração, módulos ativos e correções do fabricante podem mudar o resultado." />
+                               Text="{l:T security.disclaimer}" />
                     <TextBlock Classes="caption tertiary" Text="{Binding VulnerabilitySourceNote}" TextWrapping="Wrap" IsVisible="{Binding VulnerabilitySourceNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                   </StackPanel>
                 </Grid>
@@ -660,15 +667,15 @@
                 <Border Width="64" Height="64" CornerRadius="20" Background="#1A34D399" HorizontalAlignment="Center">
                   <Path Classes="icon xl" Data="{StaticResource Icon.ShieldCheck}" Stroke="{StaticResource SuccessBrush}" />
                 </Border>
-                <TextBlock Classes="h2" Text="Tudo limpo" HorizontalAlignment="Center" />
-                <TextBlock Classes="caption" Text="Nenhuma vulnerabilidade conhecida para as versões detetadas." HorizontalAlignment="Center" />
+                <TextBlock Classes="h2" Text="{l:T security.allClear}" HorizontalAlignment="Center" />
+                <TextBlock Classes="caption" Text="{l:T security.allClear.hint}" HorizontalAlignment="Center" />
               </StackPanel>
               <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,60,0,0" IsVisible="{Binding ShowSecurityNotChecked}">
                 <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource SurfaceStrongBrush}" HorizontalAlignment="Center">
                   <Path Classes="icon xl" Data="{StaticResource Icon.Shield}" Stroke="{StaticResource TextTertiaryBrush}" />
                 </Border>
-                <TextBlock Classes="h2" Text="Verificação desligada" HorizontalAlignment="Center" />
-                <TextBlock Classes="caption" Text="Ativa “Vulnerabilidades” nas opções de análise e volta a analisar." HorizontalAlignment="Center" />
+                <TextBlock Classes="h2" Text="{l:T security.off}" HorizontalAlignment="Center" />
+                <TextBlock Classes="caption" Text="{l:T security.off.hint}" HorizontalAlignment="Center" />
               </StackPanel>
             </StackPanel>
           </ScrollViewer>
@@ -677,7 +684,7 @@
           <Grid IsVisible="{Binding IsHistoryPage}" ColumnDefinitions="*,380" Margin="32,0,28,24">
             <Border Classes="card" Padding="6">
               <Grid RowDefinitions="Auto,*">
-                <TextBlock Classes="overline" Text="DISPOSITIVOS CONHECIDOS" Margin="14,12,0,10" />
+                <TextBlock Classes="overline" Text="{l:T history.known}" Margin="14,12,0,10" />
                 <ListBox Grid.Row="1" Classes="clean" ItemsSource="{Binding KnownDevices}" Padding="8,0,8,4">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:DeviceItemViewModel">
@@ -692,7 +699,7 @@
                             <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
                           </StackPanel>
                           <StackPanel Grid.Column="2" Margin="0,0,24,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Classes="caption tertiary" Text="Primeira vez" FontSize="10.5" />
+                            <TextBlock Classes="caption tertiary" Text="{l:T history.firstTime}" FontSize="10.5" />
                             <TextBlock Classes="caption" Text="{Binding FirstSeen}" />
                           </StackPanel>
                           <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="7" Width="130" VerticalAlignment="Center">
@@ -709,10 +716,10 @@
 
             <Border Grid.Column="1" Classes="card" Margin="16,0,0,0" Padding="18">
               <Grid RowDefinitions="Auto,*">
-                <TextBlock Classes="overline" Text="ATIVIDADE RECENTE" Margin="0,0,0,14" />
+                <TextBlock Classes="overline" Text="{l:T history.recent}" Margin="0,0,0,14" />
                 <ScrollViewer Grid.Row="1">
                   <StackPanel>
-                    <TextBlock Classes="caption" Text="Ainda sem atividade registada." IsVisible="{Binding !HasHistory}" />
+                    <TextBlock Classes="caption" Text="{l:T history.empty}" IsVisible="{Binding !HasHistory}" />
                     <ItemsControl ItemsSource="{Binding RecentEvents}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:HistoryEventViewModel">
@@ -753,7 +760,7 @@
                             <TextBlock Classes="h3" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                             <TextBlock Classes="caption mono" Text="{Binding Details}" TextTrimming="CharacterEllipsis" />
                           </StackPanel>
-                          <Button Grid.Column="2" Classes="flat icon" Width="30" Height="30" ToolTip.Tip="Deixar de vigiar"
+                          <Button Grid.Column="2" Classes="flat icon" Width="30" Height="30" ToolTip.Tip="{l:T watch.remove}"
                                   Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RemoveWatchCommand}" CommandParameter="{Binding}">
                             <Path Classes="icon sm" Data="{StaticResource Icon.Close}" />
                           </Button>
@@ -766,9 +773,9 @@
                         </StackPanel>
                         <Border Classes="divider" />
                         <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                          <TextBlock Text="Avisar quando entra" VerticalAlignment="Center" />
+                          <TextBlock Text="{l:T watch.notifyEnter}" VerticalAlignment="Center" />
                           <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyOnEnter}" />
-                          <TextBlock Grid.Row="1" Text="Avisar quando sai" VerticalAlignment="Center" />
+                          <TextBlock Grid.Row="1" Text="{l:T watch.notifyLeave}" VerticalAlignment="Center" />
                           <ToggleSwitch Grid.Row="1" Grid.Column="1" IsChecked="{Binding NotifyOnLeave}" />
                         </Grid>
                       </StackPanel>
@@ -781,8 +788,8 @@
                 <Border Width="64" Height="64" CornerRadius="20" Background="#1AFBBF24" HorizontalAlignment="Center">
                   <Path Classes="icon xl" Data="{StaticResource Icon.Star}" Stroke="{StaticResource WarningBrush}" />
                 </Border>
-                <TextBlock Classes="h2" Text="Ainda não vigias nenhum dispositivo" HorizontalAlignment="Center" />
-                <TextBlock Classes="caption" Text="Toca na estrela de um dispositivo para receberes um aviso quando ele entra ou sai da rede." HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="420" TextAlignment="Center" />
+                <TextBlock Classes="h2" Text="{l:T watch.empty}" HorizontalAlignment="Center" />
+                <TextBlock Classes="caption" Text="{l:T watch.empty.hint}" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="420" TextAlignment="Center" />
               </StackPanel>
             </StackPanel>
           </ScrollViewer>

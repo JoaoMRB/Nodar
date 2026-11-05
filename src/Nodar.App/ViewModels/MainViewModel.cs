@@ -7,6 +7,8 @@ using Nodar.Core.Models;
 using Nodar.Core.Monitoring;
 using Nodar.Core.Services;
 using Nodar.Core.Settings;
+using Nodar.Core.Localization;
+using static Nodar.Core.Localization.Loc;
 
 namespace Nodar.App.ViewModels;
 
@@ -44,9 +46,11 @@ public sealed partial class MainViewModel : ObservableObject
         WindowsNotifications = _settings.WindowsNotifications;
         CloseToTray = _settings.CloseToTray;
         StartWithWindows = _settings.StartWithWindows;
+        SelectedLanguage = LanguageOptions.FirstOrDefault(o => o.Code == _settings.Language) ?? LanguageOptions[0];
         StartupRegistration.Refresh(_settings.StartWithWindows);
         SelectedInterval = IntervalOptions.FirstOrDefault(o => o.Seconds == _settings.RefreshIntervalSeconds) ?? IntervalOptions[1];
         _loadingSettings = false;
+        Instance.LanguageChanged += OnLanguageChanged;
 
         IsAdmin = DemoData.IsEnabled || NetworkDiscoveryService.IsAdministrator();
         if (DemoData.IsEnabled)
@@ -82,6 +86,35 @@ public sealed partial class MainViewModel : ObservableObject
     public bool CanStartWithWindows => StartupRegistration.CurrentCommand() != null;
 
     partial void OnWindowsNotificationsChanged(bool value) => SaveSettings();
+
+    // ================================================================ Idioma
+
+    [ObservableProperty] private IReadOnlyList<LanguageOption> _languageOptions = [new("auto"), new("pt"), new("en")];
+
+    [ObservableProperty] private LanguageOption? _selectedLanguage;
+
+    partial void OnSelectedLanguageChanged(LanguageOption? value)
+    {
+        Instance.Apply(value?.Code);
+        SaveSettings();
+    }
+
+    /// <summary>O idioma mudou: refazer tudo o que tem texto calculado (as ligações {l:T} atualizam-se sozinhas).</summary>
+    private void OnLanguageChanged()
+    {
+        var interval = SelectedInterval?.Seconds;
+        IntervalOptions = [new(60), new(120), new(300), new(900)];
+        _loadingSettings = true;
+        SelectedInterval = IntervalOptions.FirstOrDefault(o => o.Seconds == interval) ?? IntervalOptions[1];
+        var language = SelectedLanguage?.Code;
+        LanguageOptions = [new("auto"), new("pt"), new("en")];
+        SelectedLanguage = LanguageOptions.First(o => o.Code == (language ?? "auto"));
+        _loadingSettings = false;
+
+        RebuildDevices();
+        RebuildWatchlist();
+        OnPropertyChanged(string.Empty);
+    }
     partial void OnCloseToTrayChanged(bool value) => SaveSettings();
 
     partial void OnStartWithWindowsChanged(bool value)
@@ -90,7 +123,7 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         if (!StartupRegistration.Set(value) && value)
         {
-            Toast("Não foi possível ativar", "Iniciar com o Windows só funciona a partir do Nodar.exe publicado.", ToastKind.Warning);
+            Toast(T("toast.startup.failed"), T("toast.startup.failed.hint"), ToastKind.Warning);
             _loadingSettings = true;
             StartWithWindows = false;
             _loadingSettings = false;
@@ -112,10 +145,8 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         _settings.TrayHintShown = true;
         _settings.Save();
-        _platform.NotifySystem("O Nodar continua a vigiar a rede",
-            AutoRefresh
-                ? "Está na área de notificação e avisa-te quando entrar alguém novo. Para sair, usa o menu do ícone."
-                : "Está na área de notificação. Ativa a atualização automática para receberes avisos.");
+        _platform.NotifySystem(T("tray.hint.title"),
+            AutoRefresh ? T("tray.hint.autoRefresh") : T("tray.hint.manual"));
     }
 
     // ================================================================ Rede
@@ -158,17 +189,17 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string PageTitle => CurrentPage switch
     {
-        Page.Security => "Segurança",
-        Page.History => "Histórico",
-        Page.Watchlist => "Monitorizados",
-        _ => "Dispositivos"
+        Page.Security => T("nav.security"),
+        Page.History => T("nav.history"),
+        Page.Watchlist => T("nav.watchlist"),
+        _ => T("nav.devices")
     };
 
     public string PageSubtitle => CurrentPage switch
     {
         Page.Security => SecuritySubtitle,
-        Page.History => $"{_tracker.History.Count} dispositivos conhecidos nesta rede",
-        Page.Watchlist => WatchItems.Count == 0 ? "Recebe um aviso quando um dispositivo entra ou sai" : $"{WatchItems.Count} a vigiar",
+        Page.History => Plural("history.subtitle", _tracker.History.Count),
+        Page.Watchlist => WatchItems.Count == 0 ? T("watch.subtitle.empty") : Plural("watch.subtitle", WatchItems.Count),
         _ => DevicesSubtitle
     };
 
@@ -186,13 +217,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _showOffline;
     [ObservableProperty] private IntervalOption? _selectedInterval;
 
-    public IReadOnlyList<IntervalOption> IntervalOptions { get; } =
-    [
-        new(60, "1 minuto"),
-        new(120, "2 minutos"),
-        new(300, "5 minutos"),
-        new(900, "15 minutos"),
-    ];
+    [ObservableProperty] private IReadOnlyList<IntervalOption> _intervalOptions = [new(60), new(120), new(300), new(900)];
 
     // Dependências: vulnerabilidades ⇒ serviços ⇒ portas.
     partial void OnVulnerabilityScanChanged(bool value)
@@ -250,6 +275,7 @@ public sealed partial class MainViewModel : ObservableObject
         _settings.WindowsNotifications = WindowsNotifications;
         _settings.CloseToTray = CloseToTray;
         _settings.StartWithWindows = StartWithWindows;
+        _settings.Language = SelectedLanguage?.Code ?? "auto";
         _settings.Save();
     }
 
@@ -266,11 +292,11 @@ public sealed partial class MainViewModel : ObservableObject
     {
         get
         {
-            var parts = new List<string> { DeepScan ? "Sub-rede completa" : "Rápido" };
-            if (PortScan) parts.Add("portas");
-            if (ServiceDetection) parts.Add("serviços");
-            if (VulnerabilityScan) parts.Add("vulnerabilidades");
-            if (OsDetection) parts.Add("SO");
+            var parts = new List<string> { DeepScan ? T("mode.full") : T("mode.quick") };
+            if (PortScan) parts.Add(T("mode.ports"));
+            if (ServiceDetection) parts.Add(T("mode.services"));
+            if (VulnerabilityScan) parts.Add(T("mode.vulns"));
+            if (OsDetection) parts.Add(T("mode.os"));
             return string.Join(" · ", parts);
         }
     }
@@ -287,7 +313,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _scanMessage = "";
     [ObservableProperty] private string? _vulnerabilitySourceNote;
 
-    public string LastScanText => _lastScanAt == null ? "Ainda não analisado" : $"Última análise {Visuals.Relative(_lastScanAt)}";
+    public string LastScanText => _lastScanAt == null ? T("scan.never") : F("scan.last", Visuals.Relative(_lastScanAt));
 
     [RelayCommand]
     private async Task ScanAsync()
@@ -297,7 +323,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         IsScanning = true;
         ScanProgress = 0;
-        ScanMessage = "A preparar…";
+        ScanMessage = T("scan.preparing");
         _scanCts = new CancellationTokenSource();
         OnPropertyChanged(nameof(ScanModeSummary));
 
@@ -335,7 +361,7 @@ public sealed partial class MainViewModel : ObservableObject
                 : await Task.Run(() => NetworkDiscoveryService.ScanAsync(options), _scanCts.Token);
             if (result.Error != null)
             {
-                Toast("Não foi possível analisar", result.Error, ToastKind.Danger);
+                Toast(T("toast.scan.failed"), result.Error, ToastKind.Danger);
                 return;
             }
 
@@ -352,11 +378,11 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            Toast("Análise cancelada", "", ToastKind.Info);
+            Toast(T("toast.scan.cancelled"), "", ToastKind.Info);
         }
         catch (Exception ex)
         {
-            Toast("Erro na análise", ex.Message, ToastKind.Danger);
+            Toast(T("toast.scan.error"), ex.Message, ToastKind.Danger);
         }
         finally
         {
@@ -377,38 +403,38 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var item = FindItem(d);
             var name = item?.DisplayName ?? d.IpAddress;
-            var detail = item != null && item.Vendor != "Desconhecido" ? item.Vendor : d.DeviceType;
-            return $"{name} · {d.IpAddress}" + (string.IsNullOrWhiteSpace(detail) || detail == "Dispositivo" ? "" : $" · {detail}");
+            var detail = item != null && !Visuals.IsUnknownVendor(d.Vendor) ? item.Vendor : d.DeviceType == "Dispositivo" ? "" : Visuals.TypeLabel(d.DeviceType);
+            return $"{name} · {d.IpAddress}" + (string.IsNullOrWhiteSpace(detail) ? "" : $" · {detail}");
         }
 
         // Dentro da app: um aviso por dispositivo (até 3).
         foreach (var device in update.NewDevices.Take(3))
-            Toast("Novo dispositivo na rede", Describe(device), ToastKind.Info);
+            Toast(T("notify.newDevice"), Describe(device), ToastKind.Info);
         if (update.NewDevices.Count > 3)
-            Toast($"+{update.NewDevices.Count - 3} dispositivos novos", "", ToastKind.Info);
+            Toast(F("notify.moreNew", update.NewDevices.Count - 3), "", ToastKind.Info);
 
         // No Windows: uma só notificação para os novos (não inundar a central de notificações).
         if (update.NewDevices.Count == 1)
-            NotifySystem("Novo dispositivo na rede", Describe(update.NewDevices[0]));
+            NotifySystem(T("notify.newDevice"), Describe(update.NewDevices[0]));
         else if (update.NewDevices.Count > 1)
-            NotifySystem($"{update.NewDevices.Count} dispositivos novos na rede",
+            NotifySystem(F("notify.newDevices", update.NewDevices.Count),
                 string.Join("\n", update.NewDevices.Take(4).Select(Describe)) + (update.NewDevices.Count > 4 ? "\n…" : ""));
 
         foreach (var e in update.WatchedArrived)
         {
-            Toast($"{e.Watched.Name} entrou na rede", e.IpAddress, ToastKind.Success);
-            NotifySystem($"{e.Watched.Name} entrou na rede", $"{e.DeviceName} · {e.IpAddress}");
+            Toast(F("event.deviceJoined", e.Watched.Name), e.IpAddress, ToastKind.Success);
+            NotifySystem(F("event.deviceJoined", e.Watched.Name), $"{e.DeviceName} · {e.IpAddress}");
         }
         foreach (var e in update.WatchedLeft)
         {
-            Toast($"{e.Watched.Name} saiu da rede", e.IpAddress, ToastKind.Warning);
-            NotifySystem($"{e.Watched.Name} saiu da rede", $"Visto pela última vez em {e.IpAddress}");
+            Toast(F("event.deviceLeft", e.Watched.Name), e.IpAddress, ToastKind.Warning);
+            NotifySystem(F("event.deviceLeft", e.Watched.Name), F("notify.lastSeenAt", e.IpAddress));
         }
 
         var sourceProblem = result.Devices.SelectMany(d => d.Services)
             .Any(s => s.VulnerabilityCheck is VulnerabilityCheckStatus.SourceUnavailable or VulnerabilityCheckStatus.CheckedWithStaleData);
         if (sourceProblem)
-            Toast("NVD inacessível", "A verificação de vulnerabilidades está incompleta ou usa dados em cache.", ToastKind.Warning);
+            Toast(T("check.unavailable"), T("toast.nvd.hint"), ToastKind.Warning);
     }
 
     // ================================================================ Dispositivos
@@ -439,8 +465,8 @@ public sealed partial class MainViewModel : ObservableObject
     public bool NoSearchResults => HasDevices && Devices.Count == 0;
 
     public string DevicesSubtitle => !HasScanned
-        ? "A procurar dispositivos na tua rede…"
-        : $"{OnlineCount} online" + (OfflineCount > 0 && ShowOffline ? $" · {OfflineCount} offline" : "") + $" · {LastScanText.ToLowerInvariant()}";
+        ? T("devices.subtitle.searching")
+        : F("devices.subtitle.online", OnlineCount) + (OfflineCount > 0 && ShowOffline ? " · " + F("devices.subtitle.offline", OfflineCount) : "") + $" · {LastScanText.ToLower(Instance.Culture)}";
 
     private void RebuildDevices()
     {
@@ -535,13 +561,13 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _tracker.Unwatch(existing);
             device.IsWatched = false;
-            Toast("Deixou de ser vigiado", device.DisplayName, ToastKind.Info);
+            Toast(T("toast.unwatched"), device.DisplayName, ToastKind.Info);
         }
         else
         {
             _tracker.Watch(device.Device, device.DisplayName);
             device.IsWatched = true;
-            Toast("A vigiar dispositivo", $"Vais receber um aviso quando {device.DisplayName} entrar ou sair.", ToastKind.Success);
+            Toast(T("toast.watched"), F("toast.watched.hint", device.DisplayName), ToastKind.Success);
         }
         RebuildWatchlist();
     }
@@ -552,7 +578,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(text) || text == "—")
             return;
         await _platform.CopyToClipboardAsync(text);
-        Toast("Copiado", text, ToastKind.Success);
+        Toast(T("toast.copied"), text, ToastKind.Success);
     }
 
     [RelayCommand]
@@ -607,12 +633,12 @@ public sealed partial class MainViewModel : ObservableObject
     public bool ShowSecurityAllClear => SecurityChecked && AllVulnerabilities.Count == 0;
 
     public string SecuritySubtitle => _lastResult == null
-        ? "À espera da primeira análise…"
+        ? T("security.subtitle.waiting")
         : !SecurityChecked
-        ? "Ativa a verificação de vulnerabilidades nas opções de análise"
+        ? T("security.subtitle.off")
         : AllVulnerabilities.Count == 0
-            ? "Nenhuma vulnerabilidade conhecida nas versões detetadas"
-            : $"{AllVulnerabilities.Count} vulnerabilidades potenciais em {VulnerableDeviceCount} dispositivo{(VulnerableDeviceCount == 1 ? "" : "s")}";
+            ? T("security.allClear.hint")
+            : F("security.subtitle.count", AllVulnerabilities.Count, Plural("security.subtitle.devices", VulnerableDeviceCount));
 
     private void RebuildSecurity()
     {
@@ -669,7 +695,7 @@ public sealed partial class MainViewModel : ObservableObject
     private static string NameFor(DeviceHistoryEntry h) =>
         !string.IsNullOrWhiteSpace(h.FriendlyName) ? h.FriendlyName :
         !string.IsNullOrWhiteSpace(h.Hostname) ? h.Hostname.Split('.')[0] :
-        !string.IsNullOrWhiteSpace(h.Vendor) && h.Vendor != "Desconhecido" ? h.Vendor : h.IpAddress;
+        !Visuals.IsUnknownVendor(h.Vendor) ? Visuals.VendorLabel(h.Vendor) : h.IpAddress;
 
     // ================================================================ Monitorizados
 
@@ -707,17 +733,17 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (_lastResult == null)
             return;
-        var path = await _platform.PickSaveFileAsync("Exportar dispositivos", $"nodar-dispositivos-{DateTime.Now:yyyyMMdd-HHmm}.csv", "csv", "CSV");
+        var path = await _platform.PickSaveFileAsync(T("export.dialog.devices"), $"{T("export.file.devices")}-{DateTime.Now:yyyyMMdd-HHmm}.csv", "csv", "CSV");
         if (path == null)
             return;
         try
         {
             ExportService.ExportToCsv(_lastResult.Devices, path);
-            Toast("Exportado", Path.GetFileName(path), ToastKind.Success);
+            Toast(T("toast.exported"), Path.GetFileName(path), ToastKind.Success);
         }
         catch (Exception ex)
         {
-            Toast("Não foi possível exportar", ex.Message, ToastKind.Danger);
+            Toast(T("toast.export.failed"), ex.Message, ToastKind.Danger);
         }
     }
 
@@ -734,7 +760,7 @@ public sealed partial class MainViewModel : ObservableObject
             _ => ("html", "HTML")
         };
 
-        var path = await _platform.PickSaveFileAsync("Guardar relatório", $"nodar-relatorio-{DateTime.Now:yyyyMMdd-HHmm}.{ext}", ext, label);
+        var path = await _platform.PickSaveFileAsync(T("export.dialog.report"), $"{T("export.file.report")}-{DateTime.Now:yyyyMMdd-HHmm}.{ext}", ext, label);
         if (path == null)
             return;
 
@@ -751,11 +777,11 @@ public sealed partial class MainViewModel : ObservableObject
                 _ => await AuditReportService.GenerateHTMLReportAsync(_lastResult, history, options)
             };
             await File.WriteAllTextAsync(path, report);
-            Toast("Relatório guardado", Path.GetFileName(path), ToastKind.Success);
+            Toast(T("toast.report.saved"), Path.GetFileName(path), ToastKind.Success);
         }
         catch (Exception ex)
         {
-            Toast("Não foi possível gerar o relatório", ex.Message, ToastKind.Danger);
+            Toast(T("toast.report.failed"), ex.Message, ToastKind.Danger);
         }
     }
 
@@ -774,7 +800,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     public void ReportUnexpectedError(Exception ex) =>
-        Toast("Ocorreu um erro inesperado", $"{ex.Message} (registado em {CrashLog.Directory})", ToastKind.Danger);
+        Toast(T("toast.unexpected"), F("toast.unexpected.hint", ex.Message, CrashLog.Directory), ToastKind.Danger);
 
     [RelayCommand]
     private void DismissToast(ToastViewModel? toast)
@@ -784,7 +810,19 @@ public sealed partial class MainViewModel : ObservableObject
     }
 }
 
-public sealed record IntervalOption(int Seconds, string Label)
+public sealed record LanguageOption(string Code)
 {
+    public string Label => Code switch
+    {
+        "pt" => "Português",
+        "en" => "English",
+        _ => F("language.auto", Instance.Language == "pt" ? "Português" : "English")
+    };
+    public override string ToString() => Label;
+}
+
+public sealed record IntervalOption(int Seconds)
+{
+    public string Label => Plural("interval.minutes", Seconds / 60);
     public override string ToString() => Label;
 }

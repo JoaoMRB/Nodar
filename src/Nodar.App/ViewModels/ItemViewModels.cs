@@ -2,6 +2,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Nodar.Core.Models;
 using Nodar.Core.Monitoring;
+using static Nodar.Core.Localization.Loc;
 
 namespace Nodar.App.ViewModels;
 
@@ -40,23 +41,23 @@ public sealed partial class DeviceItemViewModel : ObservableObject
 
     public string DisplayName =>
         !string.IsNullOrWhiteSpace(Device.FriendlyName) ? Device.FriendlyName :
-        IsGateway && string.IsNullOrWhiteSpace(Device.Hostname) ? "Router" :
+        IsGateway && string.IsNullOrWhiteSpace(Device.Hostname) ? T("net.router") :
         !string.IsNullOrWhiteSpace(Device.Hostname) ? TrimDomain(Device.Hostname) :
-        !string.IsNullOrWhiteSpace(Device.Vendor) && Device.Vendor != "Desconhecido" ? Device.Vendor :
+        !Visuals.IsUnknownVendor(Device.Vendor) ? Visuals.VendorLabel(Device.Vendor) :
         Device.IpAddress;
 
     public string IpAddress => Device.IpAddress;
     public string MacAddress => string.IsNullOrWhiteSpace(Device.MacAddress) ? "—" : Device.MacAddress;
-    public string Vendor => string.IsNullOrWhiteSpace(Device.Vendor) || Device.Vendor == "Router/Gateway" ? "Desconhecido" : Device.Vendor;
-    public string TypeLabel => IsGateway ? "Router" : Device.IsLocalDevice ? "Este computador" : Device.DeviceType;
-    public string Subtitle => $"{Device.IpAddress}  ·  {(!string.IsNullOrWhiteSpace(Device.Model) ? Device.Model : Vendor == "Desconhecido" ? TypeLabel : Vendor)}";
+    public string Vendor => Visuals.VendorLabel(Device.Vendor);
+    public string TypeLabel => IsGateway ? T("type.Router") : Device.IsLocalDevice ? T("type.thisComputer") : Visuals.TypeLabel(Device.DeviceType);
+    public string Subtitle => $"{Device.IpAddress}  ·  {(!string.IsNullOrWhiteSpace(Device.Model) ? Device.Model : Visuals.IsUnknownVendor(Device.Vendor) ? TypeLabel : Vendor)}";
     public string Hostname => string.IsNullOrWhiteSpace(Device.Hostname) ? "—" : Device.Hostname;
     public string Model => string.IsNullOrWhiteSpace(Device.Model) ? "—"
         : !string.IsNullOrWhiteSpace(Device.ModelId) && Device.ModelId != Device.Model ? $"{Device.Model} ({Device.ModelId})"
         : Device.Model;
     public string OperatingSystem => string.IsNullOrWhiteSpace(Device.OperatingSystem)
         ? "—"
-        : $"{Device.OperatingSystem} · confiança {Device.OSConfidence.ToLowerInvariant()}";
+        : F("details.osConfidence", Device.OperatingSystem, Visuals.ConfidenceLabel(Device.OSConfidence));
 
     public Geometry Icon { get; }
     public IBrush IconTint { get; }
@@ -66,12 +67,12 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     public bool IsLocal => Device.IsLocalDevice;
     public bool IsOnline { get; }
     public IBrush StatusBrush => IsOnline ? Visuals.OnlineBrush : Visuals.OfflineBrush;
-    public string StatusText => IsOnline ? "Online" : $"Offline · {Visuals.Relative(History?.LastLeftAt ?? History?.SeenAt)}";
+    public string StatusText => IsOnline ? T("status.online") : F("status.offlineSince", Visuals.Relative(History?.LastLeftAt ?? History?.SeenAt));
 
     /// <summary>Apareceu pela primeira vez nas últimas 24 h (depois do primeiro scan de sempre).</summary>
     public bool IsNew { get; }
-    public string FirstSeen => History?.FirstSeenAt is { } f ? f.ToString("dd/MM/yyyy HH:mm") : "—";
-    public string LastSeen => IsOnline ? "agora" : Visuals.Relative(History?.SeenAt);
+    public string FirstSeen => History?.FirstSeenAt is { } f ? f.ToString("g", Instance.Culture) : "—";
+    public string LastSeen => IsOnline ? T("time.now") : Visuals.Relative(History?.SeenAt);
 
     [ObservableProperty]
     private bool _isWatched;
@@ -81,7 +82,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     public bool HasServices => Services.Count > 0;
     public int OpenPortCount => string.IsNullOrWhiteSpace(Device.OpenPorts) ? 0 : Device.OpenPorts.Split(',').Length;
     public bool HasOpenPorts => OpenPortCount > 0;
-    public string PortsText => OpenPortCount == 1 ? "1 porta" : $"{OpenPortCount} portas";
+    public string PortsText => Plural("badge.ports", OpenPortCount);
 
     // Vulnerabilidades
     public IReadOnlyList<VulnerabilityItemViewModel> Vulnerabilities { get; }
@@ -94,8 +95,8 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     public IBrush TopSeverityBrush => Visuals.SeverityBrush(TopSeverity);
     public IBrush TopSeveritySoftBrush => Visuals.SeveritySoftBrush(TopSeverity);
     public string VulnBadgeText => KevCount > 0
-        ? $"{Vulnerabilities.Count} CVE · {KevCount} explorada{(KevCount > 1 ? "s" : "")}"
-        : $"{Vulnerabilities.Count} CVE";
+        ? F("badge.cve", Vulnerabilities.Count) + " · " + Plural("badge.exploited", KevCount)
+        : F("badge.cve", Vulnerabilities.Count);
     public bool MayBeBackported => Device.Vulnerabilities.Any(v => v.MayBeBackported);
 
     public IReadOnlyList<HistoryEventViewModel> Events { get; }
@@ -118,7 +119,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
 public sealed class ServiceItemViewModel(ServiceInfo service)
 {
     public string Port => service.Port.ToString();
-    public string Name => service.Service == "unknown" ? "Desconhecido" : service.Service;
+    public string Name => service.Service == "unknown" ? T("vendor.unknown") : service.Service;
 
     public string Product
     {
@@ -127,17 +128,17 @@ public sealed class ServiceItemViewModel(ServiceInfo service)
             var text = string.Join(" ", new[] { service.Product, service.Version }.Where(s => !string.IsNullOrWhiteSpace(s)));
             if (text.Equals(service.Service, StringComparison.OrdinalIgnoreCase))
                 text = "";
-            return text.Length == 0 ? "Produto não identificado" : text + (service.IsDistroPackage ? $" ({service.DistroName})" : "");
+            return text.Length == 0 ? T("service.unidentified") : text + (service.IsDistroPackage ? $" ({service.DistroName})" : "");
         }
     }
 
     public string CheckText => service.VulnerabilityCheck switch
     {
-        VulnerabilityCheckStatus.Checked => "Verificado na NVD",
-        VulnerabilityCheckStatus.CheckedWithStaleData => "Verificado com cache (sem ligação)",
-        VulnerabilityCheckStatus.VersionUnknown => "Versão não anunciada",
-        VulnerabilityCheckStatus.UnsupportedProduct => "Produto não suportado",
-        VulnerabilityCheckStatus.SourceUnavailable => "NVD inacessível",
+        VulnerabilityCheckStatus.Checked => T("check.checked"),
+        VulnerabilityCheckStatus.CheckedWithStaleData => T("check.stale"),
+        VulnerabilityCheckStatus.VersionUnknown => T("check.versionUnknown"),
+        VulnerabilityCheckStatus.UnsupportedProduct => T("check.unsupported"),
+        VulnerabilityCheckStatus.SourceUnavailable => T("check.unavailable"),
         _ => ""
     };
 
@@ -158,7 +159,7 @@ public sealed class VulnerabilityItemViewModel(VulnerabilityInfo vuln, string de
     public string Url => vuln.Url;
     public string DeviceName => deviceName;
     public string DeviceIp => deviceIp;
-    public string Where => $"{vuln.Product} {vuln.DetectedVersion} · porta {vuln.Port}";
+    public string Where => F("vuln.where", vuln.Product, vuln.DetectedVersion, vuln.Port);
     public string WhereWithDevice => $"{deviceName} · {Where}";
     public string Description => vuln.Description;
     public string Severity => vuln.Severity;
@@ -169,7 +170,7 @@ public sealed class VulnerabilityItemViewModel(VulnerabilityInfo vuln, string de
     public string Score => vuln.CvssScore is { } s ? s.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "—";
     public double ScoreValue => vuln.CvssScore ?? -1;
     public bool IsKnownExploited => vuln.IsKnownExploited;
-    public string KevText => vuln.KnownRansomwareUse ? "Explorada ativamente · ransomware" : "Explorada ativamente";
+    public string KevText => vuln.KnownRansomwareUse ? T("vuln.exploitedRansomware") : T("security.exploited");
     public bool MayBeBackported => vuln.MayBeBackported;
 }
 
@@ -178,9 +179,9 @@ public sealed class HistoryEventViewModel(DeviceHistoryEvent e, string deviceNam
     public DateTime Timestamp => e.Timestamp;
     public string DeviceName => deviceName;
     public bool IsArrival => e.EventType == DeviceHistoryEventType.Seen;
-    public string Title => IsArrival ? "Entrou na rede" : "Saiu da rede";
-    public string TitleWithDevice => IsArrival ? $"{deviceName} entrou na rede" : $"{deviceName} saiu da rede";
-    public string When => e.Timestamp.ToString("dd/MM HH:mm");
+    public string Title => IsArrival ? T("event.joined") : T("event.left");
+    public string TitleWithDevice => IsArrival ? F("event.deviceJoined", deviceName) : F("event.deviceLeft", deviceName);
+    public string When => e.Timestamp.ToString(Instance.Language == "pt" ? "dd/MM HH:mm" : "MMM d, HH:mm", Instance.Culture);
     public string Relative => Visuals.Relative(e.Timestamp);
     public Geometry Icon => Visuals.Icon(IsArrival ? "Icon.ArrowIn" : "Icon.ArrowOut");
     public IBrush Brush => IsArrival ? Visuals.OnlineBrush : Visuals.OfflineBrush;
@@ -204,8 +205,8 @@ public sealed partial class WatchItemViewModel : ObservableObject
     public string Details => string.Join("  ·  ", new[] { Model.IpAddress, Model.MacAddress }.Where(s => !string.IsNullOrWhiteSpace(s) && s != "—"));
     public bool IsOnline { get; }
     public IBrush StatusBrush => IsOnline ? Visuals.OnlineBrush : Visuals.OfflineBrush;
-    public string StatusText => IsOnline ? "Online" : "Offline";
-    public string Since => $"A vigiar desde {Model.AddedAt:dd/MM/yyyy}";
+    public string StatusText => IsOnline ? T("status.online") : T("status.offline");
+    public string Since => F("watch.since", Model.AddedAt.ToString("d", Instance.Culture));
 
     [ObservableProperty] private bool _notifyOnEnter;
     [ObservableProperty] private bool _notifyOnLeave;

@@ -6,6 +6,8 @@ using Avalonia.Threading;
 using Nodar.App.Services;
 using Nodar.App.ViewModels;
 using Nodar.App.Views;
+using Nodar.Core.Localization;
+using Nodar.Core.Settings;
 
 namespace Nodar.App;
 
@@ -23,6 +25,9 @@ public partial class App : Application
             // A app vive na bandeja: só termina quando o utilizador escolhe "Sair" (ou fecha sem bandeja).
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+            // Idioma antes de criar a janela (sem "piscar" no idioma errado).
+            Loc.Instance.Apply(AppSettings.Load().Language);
+
             var window = new MainWindow();
             var platform = new WindowPlatformServices(window);
             var viewModel = new MainViewModel(platform);
@@ -30,7 +35,8 @@ public partial class App : Application
 
             try
             {
-                _tray = new WindowsTray("Nodar · a vigiar a tua rede");
+                _tray = new WindowsTray(Loc.T("tray.tooltip"));
+                Loc.Instance.LanguageChanged += () => _tray?.SetTooltip(Loc.T("tray.tooltip"));
                 platform.Tray = _tray;
                 _tray.OpenRequested += () => ShowWindow(window);
                 _tray.ScanRequested += () => viewModel.ScanCommand.Execute(null);

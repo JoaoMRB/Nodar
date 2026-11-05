@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using static Nodar.Core.Localization.Loc;
 
 namespace Nodar.App.Services;
 
@@ -26,7 +27,7 @@ public sealed class WindowsTray : IDisposable
     private readonly IntPtr _icon;      // pequeno: bandeja
     private readonly IntPtr _largeIcon; // grande: notificações
     private readonly uint _taskbarCreated;
-    private readonly string _tooltip;
+    private string _tooltip;
     private bool _added;
     private bool _disposed;
 
@@ -76,6 +77,17 @@ public sealed class WindowsTray : IDisposable
         data.dwInfoFlags = _largeIcon != IntPtr.Zero ? NIIF_USER | NIIF_LARGE_ICON : NIIF_INFO;
         data.hBalloonIcon = _largeIcon;
         return Shell_NotifyIcon(NIM_MODIFY, ref data);
+    }
+
+    /// <summary>Atualiza a dica do ícone (ex.: depois de mudar de idioma).</summary>
+    public void SetTooltip(string tooltip)
+    {
+        _tooltip = tooltip;
+        if (!_added) return;
+        var data = NewData();
+        data.uFlags = NIF_TIP | NIF_SHOWTIP;
+        data.szTip = Truncate(tooltip, 127);
+        Shell_NotifyIcon(NIM_MODIFY, ref data);
     }
 
     private void AddIcon()
@@ -139,10 +151,10 @@ public sealed class WindowsTray : IDisposable
         var menu = CreatePopupMenu();
         try
         {
-            AppendMenu(menu, MF_STRING, MenuOpen, "Abrir o Nodar");
-            AppendMenu(menu, MF_STRING, MenuScan, "Analisar agora");
+            AppendMenu(menu, MF_STRING, MenuOpen, T("tray.open"));
+            AppendMenu(menu, MF_STRING, MenuScan, T("tray.scanNow"));
             AppendMenu(menu, MF_SEPARATOR, 0, null);
-            AppendMenu(menu, MF_STRING, MenuExit, "Sair");
+            AppendMenu(menu, MF_STRING, MenuExit, T("tray.exit"));
             SetMenuDefaultItem(menu, MenuOpen, 0);
 
             GetCursorPos(out var point);

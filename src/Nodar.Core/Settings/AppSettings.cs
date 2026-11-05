@@ -24,6 +24,8 @@ public sealed class AppSettings
     public bool CloseToTray { get; set; } = true;
     /// <summary>Arrancar com o Windows, minimizado na bandeja.</summary>
     public bool StartWithWindows { get; set; }
+    /// <summary>Idioma da interface: "auto" (o do Windows), "pt" ou "en".</summary>
+    public string Language { get; set; } = "auto";
     /// <summary>Já foi mostrado o aviso de que o Nodar continua na bandeja ao fechar.</summary>
     public bool TrayHintShown { get; set; }
 
