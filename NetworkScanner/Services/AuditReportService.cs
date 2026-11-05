@@ -5,6 +5,12 @@ namespace NetworkScanner.Services;
 
 public static class AuditReportService
 {
+    /// <summary>
+    /// Escapa texto para HTML. Banners, hostnames e descrições vêm da rede ou de fontes externas e
+    /// nunca podem ser inseridos no relatório sem escape (injeção de HTML/JavaScript).
+    /// </summary>
+    private static string H(string? value) => System.Net.WebUtility.HtmlEncode(value ?? "");
+
     public class AuditReportOptions
     {
         public bool IncludeVulnerabilities { get; set; } = true;
@@ -59,7 +65,7 @@ public static class AuditReportService
         sb.AppendLine($"<div><strong>Método:</strong> {scanResult.ScanMethod}</div>");
         if (!string.IsNullOrEmpty(options.AuditorName))
         {
-            sb.AppendLine($"<div><strong>Auditor:</strong> {options.AuditorName}</div>");
+            sb.AppendLine($"<div><strong>Auditor:</strong> {H(options.AuditorName)}</div>");
         }
         sb.AppendLine("</div>");
 
@@ -72,8 +78,8 @@ public static class AuditReportService
             sb.AppendLine($"<strong>Máscara:</strong> {scanResult.Network.SubnetMask}<br>");
             sb.AppendLine($"<strong>Rede:</strong> {scanResult.Network.NetworkRange}<br>");
             sb.AppendLine($"<strong>Gateway:</strong> {scanResult.Network.Gateway}<br>");
-            sb.AppendLine($"<strong>Hostname:</strong> {scanResult.Network.Hostname}<br>");
-            sb.AppendLine($"<strong>Interface:</strong> {scanResult.Network.InterfaceName}");
+            sb.AppendLine($"<strong>Hostname:</strong> {H(scanResult.Network.Hostname)}<br>");
+            sb.AppendLine($"<strong>Interface:</strong> {H(scanResult.Network.InterfaceName)}");
             sb.AppendLine("</div>");
         }
 
@@ -117,11 +123,11 @@ public static class AuditReportService
                     };
 
                     sb.AppendLine("<tr>");
-                    sb.AppendLine($"<td>{device.DisplayName} ({device.IpAddress})</td>");
-                    sb.AppendLine($"<td>{vuln.Service}</td>");
-                    sb.AppendLine($"<td class='{severityClass}'>{vuln.Severity}</td>");
-                    sb.AppendLine($"<td>{vuln.CVE}</td>");
-                    sb.AppendLine($"<td>{vuln.Description}</td>");
+                    sb.AppendLine($"<td>{H(device.DisplayName)} ({H(device.IpAddress)})</td>");
+                    sb.AppendLine($"<td>{H(vuln.Service)}</td>");
+                    sb.AppendLine($"<td class='{severityClass}'>{H(vuln.Severity)}</td>");
+                    sb.AppendLine($"<td>{H(vuln.CVE)}</td>");
+                    sb.AppendLine($"<td>{H(vuln.Description)}</td>");
                     sb.AppendLine("</tr>");
                 }
             }
@@ -152,18 +158,18 @@ public static class AuditReportService
                 (string.IsNullOrEmpty(device.OperatingSystem) ? "—" : $"{device.OperatingSystem} ({device.OSConfidence})") : "—";
 
             sb.AppendLine("<tr>");
-            sb.AppendLine($"<td>{device.IpAddress}</td>");
-            sb.AppendLine($"<td>{device.MacAddress}</td>");
-            sb.AppendLine($"<td>{device.Hostname ?? "—"}</td>");
-            sb.AppendLine($"<td>{device.Vendor}</td>");
-            sb.AppendLine($"<td>{osInfo}</td>");
-            sb.AppendLine($"<td>{device.DeviceType}</td>");
+            sb.AppendLine($"<td>{H(device.IpAddress)}</td>");
+            sb.AppendLine($"<td>{H(device.MacAddress)}</td>");
+            sb.AppendLine($"<td>{H(string.IsNullOrEmpty(device.Hostname) ? "—" : device.Hostname)}</td>");
+            sb.AppendLine($"<td>{H(device.Vendor)}</td>");
+            sb.AppendLine($"<td>{H(osInfo)}</td>");
+            sb.AppendLine($"<td>{H(device.DeviceType)}</td>");
             sb.AppendLine($"<td class='{statusClass}'>{device.Status}</td>");
 
             if (options.IncludeServices)
             {
                 var servicesList = device.Services.Any() ? 
-                    string.Join("<br>", device.Services.Select(s => $"{s.Service} {s.Version}")) : "—";
+                    string.Join("<br>", device.Services.Select(s => H($"{s.Service} {s.Product} {s.Version}"))) : "—";
                 sb.AppendLine($"<td>{servicesList}</td>");
             }
 
@@ -184,10 +190,10 @@ public static class AuditReportService
                 sb.AppendLine("<strong>Serviços Detalhados:</strong><br>");
                 foreach (var service in device.Services)
                 {
-                    sb.AppendLine($"Porta {service.Port}: {service.Service} {service.Product} {service.Version}");
+                    sb.AppendLine(H($"Porta {service.Port}: {service.Service} {service.Product} {service.Version}"));
                     if (!string.IsNullOrEmpty(service.Banner))
                     {
-                        sb.AppendLine($"<em>Banner: {service.Banner.Substring(0, Math.Min(100, service.Banner.Length))}...</em>");
+                        sb.AppendLine($"<em>Banner: {H(service.Banner.Substring(0, Math.Min(100, service.Banner.Length)))}...</em>");
                     }
                     sb.AppendLine("<br>");
                 }
@@ -211,7 +217,7 @@ public static class AuditReportService
 
                 sb.AppendLine("<tr>");
                 sb.AppendLine($"<td>{entry.IpAddress}</td>");
-                sb.AppendLine($"<td>{entry.Hostname ?? "—"}</td>");
+                sb.AppendLine($"<td>{H(string.IsNullOrEmpty(entry.Hostname) ? "—" : entry.Hostname)}</td>");
                 sb.AppendLine($"<td>{lastSeen}</td>");
                 sb.AppendLine($"<td class='{(entry.Status == "Online" ? "status-online" : "status-offline")}'>{entry.Status}</td>");
                 sb.AppendLine($"<td>{entry.Events.Count} eventos</td>");
@@ -225,7 +231,7 @@ public static class AuditReportService
         {
             sb.AppendLine("<h2>📝 Notas</h2>");
             sb.AppendLine("<div class='info-box'>");
-            sb.AppendLine(options.Notes.Replace("\n", "<br>"));
+            sb.AppendLine(H(options.Notes).Replace("\n", "<br>"));
             sb.AppendLine("</div>");
         }
 
