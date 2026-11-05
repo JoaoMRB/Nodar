@@ -4,6 +4,8 @@
 
 <h1 align="center">Nodar</h1>
 
+<p align="center"><b>Português</b> · <a href="README.en.md">English</a></p>
+
 > Descobre quem está ligado à tua rede local, identifica cada dispositivo e avisa-te quando aparece alguém novo.
 
 Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https://avaloniaui.net/). Analisa a tua LAN e mostra cada dispositivo com IP, MAC, fabricante, hostname, tipo, sistema operativo provável, serviços expostos e vulnerabilidades conhecidas. Guarda o histórico de quem entrou e saiu da rede.
@@ -30,6 +32,7 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 - Painel de detalhes com a informação do dispositivo, os serviços e o estado da verificação de cada um, as vulnerabilidades (CVSS, exploração ativa, ligação à NVD) e a atividade.
 - Opções de análise num painel próprio. As preferências ficam guardadas.
 - Avisos discretos dentro da app, sem caixas de diálogo a interromper e sem roubar o foco.
+- **Português e inglês**: segue o idioma do Windows ou escolhe-se nas opções. Muda na hora, sem reiniciar, e aplica-se também às notificações e aos relatórios.
 
 ### Descoberta de dispositivos
 - Deteção automática da rede local: interface, IP, máscara, gateway e intervalo da sub-rede. Ignora adaptadores virtuais (VPN, Hyper-V, VirtualBox…).
@@ -106,7 +109,8 @@ Mostra uma rede fictícia com serviços desatualizados, para veres a interface c
 
 Para regenerar os screenshots do README (renderizados fora do ecrã, sem mostrar nada do teu ambiente de trabalho):
 ```bash
-dotnet run --project tools/Screenshots -- docs/screenshots --demo
+dotnet run --project tools/Screenshots -- docs/screenshots --demo --lang pt
+dotnet run --project tools/Screenshots -- docs/screenshots/en --demo --lang en
 ```
 
 ### Testes
@@ -152,11 +156,13 @@ Sem chave, a NVD limita a 5 pedidos por 30 segundos, e a primeira consulta de ca
 src/Nodar.App/                       # Interface (Avalonia, MVVM)
 ├── Views/MainWindow.axaml           # Janela principal e as quatro vistas
 ├── ViewModels/                      # Estado e comandos da interface
+├── Localization/TExtension.cs       # Extensão {l:T chave} para textos traduzidos
 ├── Styles/                          # Tema (cores, sombras), estilos dos controlos e ícones
 └── Services/                        # Bandeja e notificações, instância única, arranque com o Windows, demonstração
 
 src/Nodar.Core/                      # Lógica, sem interface gráfica
 ├── Models/NetworkModels.cs          # Modelos (dispositivo, rede, histórico, scan)
+├── Localization/                    # Traduções: pt.json, en.json (mesmas chaves, verificado nos testes)
 ├── Monitoring/DeviceTracker.cs      # Histórico, dispositivos novos e monitorizados
 ├── Settings/AppSettings.cs          # Preferências
 └── Services/
@@ -223,7 +229,8 @@ Os dados locais (histórico, lista de monitorização, preferências e cache de 
 - [x] Identificação por SSDP/UPnP e NetBIOS
 - [x] Ícone da aplicação
 - [x] Screenshots no README
-- [ ] Testes dos ViewModels da interface (o Core já tem 155 testes)
+- [x] Interface, notificações e relatórios em português e inglês
+- [ ] Testes dos ViewModels da interface (o Core já tem 225 testes)
 
 ---
 

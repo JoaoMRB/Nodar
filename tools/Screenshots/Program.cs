@@ -1,6 +1,6 @@
 // Gera os screenshots do README sem tocar no ecrã: a app é renderizada fora do ecrã (Avalonia headless)
 // em modo demonstração (rede fictícia; os CVEs vêm da NVD real). Fundo sólido, sem dados do utilizador.
-// Uso: dotnet run --project tools/Screenshots -- docs/screenshots --demo
+// Uso: dotnet run --project tools/Screenshots -- docs/screenshots --demo [--lang pt|en]
 
 using Avalonia;
 using Avalonia.Controls;
@@ -20,7 +20,9 @@ if (!DemoData.IsEnabled)
     return 1;
 }
 
-var outDir = Path.GetFullPath(args.First(a => !a.StartsWith("--")));
+var langIndex = Array.IndexOf(args, "--lang");
+var lang = langIndex >= 0 && langIndex + 1 < args.Length ? args[langIndex + 1] : "pt";
+var outDir = Path.GetFullPath(args.First(a => !a.StartsWith("--") && a != lang));
 Directory.CreateDirectory(outDir);
 
 AppBuilder.Configure<App>()
@@ -31,6 +33,9 @@ AppBuilder.Configure<App>()
 
 var window = new MainWindow { Width = 1440, Height = 900 };
 var vm = new MainViewModel(new WindowPlatformServices(window));
+// Idioma pedido (sobrepõe-se ao das definições do utilizador, sem as gravar de forma duradoura).
+var previousLanguage = vm.SelectedLanguage;
+vm.SelectedLanguage = vm.LanguageOptions.First(o => o.Code == lang);
 window.DataContext = vm;
 window.Show();
 
@@ -91,10 +96,8 @@ vm.SelectedDevice = null;
 vm.NavigateCommand.Execute(Page.Security);
 Save("seguranca.png");
 
-return 0;
+// (Histórico fica de fora: em demonstração todos os eventos são do mesmo minuto.)
 
-// (Histórico: pouco interessante em demonstração, todos os eventos são do mesmo minuto.)
-vm.NavigateCommand.Execute(Page.History);
-Save("historico.png");
-
+// Repor a preferência de idioma do utilizador.
+vm.SelectedLanguage = vm.LanguageOptions.First(o => o.Code == (previousLanguage?.Code ?? "auto"));
 return 0;
