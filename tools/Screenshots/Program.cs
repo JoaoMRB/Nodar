@@ -33,9 +33,8 @@ AppBuilder.Configure<App>()
 
 var window = new MainWindow { Width = 1440, Height = 900 };
 var vm = new MainViewModel(new WindowPlatformServices(window));
-// Idioma pedido (sobrepõe-se ao das definições do utilizador, sem as gravar de forma duradoura).
-var previousLanguage = vm.SelectedLanguage;
-vm.SelectedLanguage = vm.LanguageOptions.First(o => o.Code == lang);
+// Idioma pedido, aplicado diretamente: as definições do utilizador não são gravadas.
+Nodar.Core.Localization.Loc.Instance.Apply(lang);
 window.DataContext = vm;
 window.Show();
 
@@ -98,6 +97,4 @@ Save("seguranca.png");
 
 // (Histórico fica de fora: em demonstração todos os eventos são do mesmo minuto.)
 
-// Repor a preferência de idioma do utilizador.
-vm.SelectedLanguage = vm.LanguageOptions.First(o => o.Code == (previousLanguage?.Code ?? "auto"));
 return 0;
