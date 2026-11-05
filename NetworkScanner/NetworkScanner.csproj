@@ -21,4 +21,8 @@
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\src\Nodar.Core\Nodar.Core.csproj" />
+  </ItemGroup>
+
 </Project>

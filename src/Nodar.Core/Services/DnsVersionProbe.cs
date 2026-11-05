@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace NetworkScanner.Services;
+namespace Nodar.Core.Services;
 
 /// <summary>
 /// Pergunta a versão a um servidor DNS com a consulta <c>version.bind</c> (TXT, classe CHAOS).

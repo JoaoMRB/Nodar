@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace NetworkScanner.Services.Vulnerabilities;
+namespace Nodar.Core.Services.Vulnerabilities;
 
 /// <summary>
 /// Extrai produto e versão a partir de banners de serviço (SSH, HTTP, FTP, SMTP, MySQL, Redis).
@@ -49,10 +49,10 @@ public static class BannerParser
     // "dnsmasq-2.80", "dnsmasq-pi-hole-v2.90", "unbound 1.13.1", "9.18.18-0ubuntu0.22.04.1-Ubuntu" (BIND)
     private static ParsedBanner? ParseDns(string banner)
     {
-        if (!banner.StartsWith(NetworkScanner.Services.DnsVersionProbe.BannerPrefix, StringComparison.Ordinal))
+        if (!banner.StartsWith(Nodar.Core.Services.DnsVersionProbe.BannerPrefix, StringComparison.Ordinal))
             return null;
 
-        var value = banner[NetworkScanner.Services.DnsVersionProbe.BannerPrefix.Length..].Trim();
+        var value = banner[Nodar.Core.Services.DnsVersionProbe.BannerPrefix.Length..].Trim();
 
         var dnsmasq = Regex.Match(value, @"^dnsmasq-(?<pihole>pi-hole-)?v?(?<v>\d+\.\d+(?:\.\d+)?(?:(?:test|rc)\d+)?)", Opts);
         if (dnsmasq.Success)

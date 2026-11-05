@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
-namespace NetworkScanner.Services.Vulnerabilities;
+namespace Nodar.Core.Services.Vulnerabilities;
 
 /// <summary>
 /// Cliente mínimo da NVD CVE API 2.0 (https://nvd.nist.gov/developers/vulnerabilities).

@@ -4,10 +4,10 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using NetworkScanner.Models;
-using NetworkScanner.Services;
+using Nodar.Core.Models;
+using Nodar.Core.Services;
 
-namespace NetworkScanner.Services;
+namespace Nodar.Core.Services;
 
 public static class NetworkDiscoveryService
 {

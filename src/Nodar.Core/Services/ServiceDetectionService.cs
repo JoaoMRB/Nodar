@@ -3,10 +3,10 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Security.Cryptography.X509Certificates;
-using NetworkScanner.Models;
-using NetworkScanner.Services.Vulnerabilities;
+using Nodar.Core.Models;
+using Nodar.Core.Services.Vulnerabilities;
 
-namespace NetworkScanner.Services;
+namespace Nodar.Core.Services;
 
 public static class ServiceDetectionService
 {

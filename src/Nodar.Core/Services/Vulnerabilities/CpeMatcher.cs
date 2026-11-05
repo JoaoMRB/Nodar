@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace NetworkScanner.Services.Vulnerabilities;
+namespace Nodar.Core.Services.Vulnerabilities;
 
 /// <summary>
 /// Decide se uma versão detetada é afetada pelas regras <c>cpeMatch</c> da NVD.

@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace NetworkScanner.Services.Vulnerabilities;
+namespace Nodar.Core.Services.Vulnerabilities;
 
 /// <summary>
 /// Comparação "natural" de versões de software, tolerante aos formatos reais:

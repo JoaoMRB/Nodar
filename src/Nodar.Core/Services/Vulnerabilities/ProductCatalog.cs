@@ -1,4 +1,4 @@
-namespace NetworkScanner.Services.Vulnerabilities;
+namespace Nodar.Core.Services.Vulnerabilities;
 
 /// <summary>
 /// Produtos que o Nodar sabe identificar por banner e os respetivos identificadores CPE na NVD.

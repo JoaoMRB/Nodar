@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
 
-namespace NetworkScanner.Services;
+namespace Nodar.Core.Services;
 
 public static class TracerouteService
 {

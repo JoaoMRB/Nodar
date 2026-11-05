@@ -1,4 +1,4 @@
-namespace NetworkScanner.Services;
+namespace Nodar.Core.Services;
 
 public static class VendorService
 {

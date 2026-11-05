@@ -1,4 +1,4 @@
-namespace NetworkScanner.Services.Vulnerabilities;
+namespace Nodar.Core.Services.Vulnerabilities;
 
 /// <summary>
 /// Versão compacta de um CVE da NVD: só o necessário para decidir se uma versão é afetada.

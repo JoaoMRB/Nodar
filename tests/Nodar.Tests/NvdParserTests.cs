@@ -1,5 +1,5 @@
 using System.Text.Json;
-using NetworkScanner.Services.Vulnerabilities;
+using Nodar.Core.Services.Vulnerabilities;
 
 namespace Nodar.Tests;
 

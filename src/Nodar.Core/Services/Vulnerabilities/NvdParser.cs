@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 
-namespace NetworkScanner.Services.Vulnerabilities;
+namespace Nodar.Core.Services.Vulnerabilities;
 
 /// <summary>
 /// Converte respostas da NVD CVE API 2.0 em <see cref="CveRecord"/> compactos.

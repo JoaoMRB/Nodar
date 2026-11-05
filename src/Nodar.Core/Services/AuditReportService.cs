@@ -1,7 +1,7 @@
 using System.Text;
-using NetworkScanner.Models;
+using Nodar.Core.Models;
 
-namespace NetworkScanner.Services;
+namespace Nodar.Core.Services;
 
 public static class AuditReportService
 {

@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
-using NetworkScanner.Models;
-using NetworkScanner.Services;
+using Nodar.Core.Models;
+using Nodar.Core.Services;
 using NetworkScanner.UI;
 
 namespace NetworkScanner;
@@ -684,13 +684,13 @@ public sealed class MainForm : Form
         {
             var timingLevel = _timingTemplate.SelectedItem.ToString() switch
             {
-                "Normal" => Services.TimingTemplates.TimingLevel.Normal,
-                "Polite" => Services.TimingTemplates.TimingLevel.Polite,
-                "Aggressive" => Services.TimingTemplates.TimingLevel.Aggressive,
-                "Insane" => Services.TimingTemplates.TimingLevel.Insane,
-                "Sneaky" => Services.TimingTemplates.TimingLevel.Sneaky,
-                "Paranoid" => Services.TimingTemplates.TimingLevel.Paranoid,
-                _ => Services.TimingTemplates.TimingLevel.Normal
+                "Normal" => TimingTemplates.TimingLevel.Normal,
+                "Polite" => TimingTemplates.TimingLevel.Polite,
+                "Aggressive" => TimingTemplates.TimingLevel.Aggressive,
+                "Insane" => TimingTemplates.TimingLevel.Insane,
+                "Sneaky" => TimingTemplates.TimingLevel.Sneaky,
+                "Paranoid" => TimingTemplates.TimingLevel.Paranoid,
+                _ => TimingTemplates.TimingLevel.Normal
             };
 
             var result = await Task.Run(() => NetworkDiscoveryService.ScanAsync(new ScanOptions

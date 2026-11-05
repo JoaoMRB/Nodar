@@ -5,8 +5,8 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using NetworkScanner.Services;
-using NetworkScanner.Services.Vulnerabilities;
+using Nodar.Core.Services;
+using Nodar.Core.Services.Vulnerabilities;
 
 namespace Nodar.Tests;
 

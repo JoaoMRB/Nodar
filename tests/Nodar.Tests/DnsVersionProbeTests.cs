@@ -2,8 +2,8 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using NetworkScanner.Services;
-using NetworkScanner.Services.Vulnerabilities;
+using Nodar.Core.Services;
+using Nodar.Core.Services.Vulnerabilities;
 
 namespace Nodar.Tests;
 

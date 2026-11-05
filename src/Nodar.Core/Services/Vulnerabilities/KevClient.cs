@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace NetworkScanner.Services.Vulnerabilities;
+namespace Nodar.Core.Services.Vulnerabilities;
 
 /// <summary>
 /// Catálogo CISA Known Exploited Vulnerabilities (KEV): CVEs com exploração ativa confirmada.

@@ -1,4 +1,4 @@
-namespace NetworkScanner.Models;
+namespace Nodar.Core.Models;
 
 public sealed class LocalNetworkInfo
 {

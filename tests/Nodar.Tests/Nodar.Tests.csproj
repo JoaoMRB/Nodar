@@ -2,12 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>false</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\NetworkScanner\NetworkScanner.csproj" />
+    <ProjectReference Include="..\..\src\Nodar.Core\Nodar.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
