@@ -216,6 +216,54 @@
     <Setter Property="Foreground" Value="#A79CFF" />
   </Style>
 
+  <!-- Pílulas de filtro (acima da lista de dispositivos) -->
+  <Style Selector="Button.filter">
+    <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Padding" Value="11,6,7,6" />
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.15" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.filter:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource SurfaceHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource StrokeStrongBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.filter.selected">
+    <Setter Property="Background" Value="{StaticResource SurfaceSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource StrokeSelectedBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.filter.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource SurfaceSelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.filter Path.icon">
+    <Setter Property="Stroke" Value="{StaticResource TextTertiaryBrush}" />
+  </Style>
+  <Style Selector="Button.filter.selected Path.icon">
+    <Setter Property="Stroke" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.filter Border.count">
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="MinWidth" Value="20" />
+    <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
+  </Style>
+  <Style Selector="Button.filter.selected Border.count">
+    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+  </Style>
+
   <!-- Itens da barra lateral -->
   <Style Selector="Button.nav">
     <Setter Property="Background" Value="Transparent" />

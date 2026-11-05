@@ -116,6 +116,8 @@ public sealed partial class MainViewModel : ObservableObject
             option.Refresh();
         foreach (var option in IntervalOptions)
             option.Refresh();
+        foreach (var chip in FilterChips)
+            chip.Refresh();
 
         if (_refreshPending)
             return;
@@ -462,6 +464,61 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _searchText = "";
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
+    // ================================================================ Filtros por tipo e estado
+
+    /// <summary>Pílulas de filtro acima da lista (só os grupos que existem na rede, com contagem).</summary>
+    public ObservableCollection<FilterChipViewModel> FilterChips { get; } = [];
+
+    [ObservableProperty] private string _selectedFilter = DeviceFilters.All;
+
+    public bool HasFilterChips => FilterChips.Count > 2; // "Todos" + pelo menos dois grupos
+
+    partial void OnSelectedFilterChanged(string value)
+    {
+        foreach (var chip in FilterChips)
+            chip.IsSelected = chip.Key == value;
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void SelectFilter(string? key)
+    {
+        // Voltar a tocar no filtro ativo desliga-o (volta a "Todos").
+        SelectedFilter = key == null || key == SelectedFilter ? DeviceFilters.All : key;
+    }
+
+    private void RebuildFilterChips()
+    {
+        var counts = new List<(string Key, int Count)> { (DeviceFilters.All, _allDevices.Count) };
+        counts.AddRange(DeviceFilters.TypeGroups
+            .Select(g => (g, _allDevices.Count(d => d.Group == g)))
+            .Where(x => x.Item2 > 0));
+        counts.AddRange(DeviceFilters.StateFilters
+            .Select(f => (f, _allDevices.Count(d => DeviceFilters.Matches(d, f))))
+            .Where(x => x.Item2 > 0));
+
+        // Se o filtro escolhido deixou de existir (ex.: já não há offline), voltar a "Todos".
+        if (counts.All(c => c.Key != SelectedFilter))
+            SelectedFilter = DeviceFilters.All; // a lista é refeita logo a seguir
+
+        var same = FilterChips.Select(c => c.Key).SequenceEqual(counts.Select(c => c.Key));
+        if (same)
+        {
+            for (var i = 0; i < counts.Count; i++)
+                FilterChips[i].Count = counts[i].Count;
+        }
+        else
+        {
+            FilterChips.Clear();
+            foreach (var (key, count) in counts)
+                FilterChips.Add(new FilterChipViewModel(key, count));
+        }
+        foreach (var chip in FilterChips)
+            chip.IsSelected = chip.Key == SelectedFilter;
+        OnPropertyChanged(nameof(SelectedFilter));
+        OnPropertyChanged(nameof(HasFilterChips));
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     private DeviceItemViewModel? _selectedDevice;
@@ -542,6 +599,7 @@ public sealed partial class MainViewModel : ObservableObject
         VulnerabilityCount = _allDevices.Sum(d => d.Vulnerabilities.Count);
         KevCount = _allDevices.Sum(d => d.KevCount);
 
+        RebuildFilterChips();
         ApplyFilter();
         SelectedDevice = selectedKey == null ? null : Devices.FirstOrDefault(d => d.Key == selectedKey);
         RebuildSecurity();
@@ -556,7 +614,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var selected = SelectedDevice;
         Devices.Clear();
-        foreach (var d in _allDevices.Where(d => d.Matches(SearchText)))
+        foreach (var d in _allDevices.Where(d => d.Matches(SearchText) && DeviceFilters.Matches(d, SelectedFilter)))
             Devices.Add(d);
         if (selected != null && Devices.Contains(selected))
             SelectedDevice = selected;
@@ -587,6 +645,19 @@ public sealed partial class MainViewModel : ObservableObject
             device.IsWatched = true;
             Toast(T("toast.watched"), F("toast.watched.hint", device.DisplayName), ToastKind.Success);
         }
+        RebuildWatchlist();
+        RebuildFilterChips(); // contagem de "Monitorizados"
+        if (SelectedFilter == "watched")
+            ApplyFilter();
+    }
+
+    /// <summary>Só para testes: mostrar um resultado de scan sem analisar a rede.</summary>
+    internal void ShowScanResultForTests(ScanResult result)
+    {
+        _lastResult = result;
+        _lastScanAt = DateTime.Now;
+        _tracker.ApplyScan(result.Devices);
+        RebuildDevices();
         RebuildWatchlist();
     }
 

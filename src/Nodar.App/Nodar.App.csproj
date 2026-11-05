@@ -38,6 +38,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Nodar.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Nodar.Core\Nodar.Core.csproj" />
   </ItemGroup>
 

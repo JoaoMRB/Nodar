@@ -66,7 +66,8 @@ public class LocalizationTests
             foreach (Match m in Regex.Matches(File.ReadAllText(file), @"\{l:T (?<k>[A-Za-z0-9_.]+)\}"))
                 used.Add(m.Groups["k"].Value);
 
-        used.Remove("severity."); // prefixo dinâmico (severity.Critical, …)
+        // Prefixos de chaves dinâmicas ("severity." + nível, "filter." + grupo): verificados nos seus próprios testes.
+        used.RemoveWhere(k => k.EndsWith("."));
         Assert.True(used.Count > 200);
         var missing = used.Where(k => !Loc.Instance.Has(k)).ToList();
         Assert.Empty(missing);

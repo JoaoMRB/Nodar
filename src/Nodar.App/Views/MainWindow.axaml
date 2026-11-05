@@ -305,7 +305,7 @@
 
           <!-- ============ Dispositivos -->
           <Grid IsVisible="{Binding IsDevicesPage}" ColumnDefinitions="*,Auto">
-            <Grid RowDefinitions="Auto,*" Margin="32,0,28,24">
+            <Grid RowDefinitions="Auto,Auto,*" Margin="32,0,28,24">
 
               <!-- Estatísticas -->
               <UniformGrid Columns="4" Margin="-6,0,-6,18">
@@ -355,8 +355,31 @@
                 </Border>
               </UniformGrid>
 
+              <!-- Filtros por tipo e estado -->
+              <ItemsControl Grid.Row="1" ItemsSource="{Binding FilterChips}" IsVisible="{Binding HasFilterChips}" Margin="0,0,0,14">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel ItemSpacing="8" LineSpacing="8" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FilterChipViewModel">
+                    <Button Classes="filter" Classes.selected="{Binding IsSelected}"
+                            Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectFilterCommand}"
+                            CommandParameter="{Binding Key}">
+                      <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Path Classes="icon sm" Data="{Binding Icon}" />
+                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                        <Border Classes="count">
+                          <TextBlock Text="{Binding Count}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center"
+                                     Foreground="{Binding $parent[Button].Foreground}" />
+                        </Border>
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
               <!-- Lista -->
-              <Panel Grid.Row="1">
+              <Panel Grid.Row="2">
                 <ListBox Classes="clean" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                   <ListBox.ItemTemplate>

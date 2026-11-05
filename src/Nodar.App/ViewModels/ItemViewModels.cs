@@ -34,6 +34,9 @@ public sealed partial class DeviceItemViewModel : ObservableObject
             .ToList();
     }
 
+    /// <summary>Grupo para os filtros (computers, phones, tv…): ver <see cref="DeviceFilters"/>.</summary>
+    public string Group => DeviceFilters.GroupOf(Device.DeviceType, IsGateway, Device.IsLocalDevice);
+
     public DeviceInfo Device { get; }
     public DeviceHistoryEntry? History { get; }
     /// <summary>Identidade no histórico (ver <see cref="DeviceTracker.Key(DeviceInfo)"/>).</summary>
