@@ -504,10 +504,12 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool SecurityChecked => _lastResult?.Devices.SelectMany(d => d.Services)
         .Any(s => s.VulnerabilityCheck != VulnerabilityCheckStatus.NotRequested) == true;
-    public bool ShowSecurityNotChecked => !SecurityChecked;
+    public bool ShowSecurityNotChecked => _lastResult != null && !SecurityChecked;
     public bool ShowSecurityAllClear => SecurityChecked && AllVulnerabilities.Count == 0;
 
-    public string SecuritySubtitle => !SecurityChecked
+    public string SecuritySubtitle => _lastResult == null
+        ? "À espera da primeira análise…"
+        : !SecurityChecked
         ? "Ativa a verificação de vulnerabilidades nas opções de análise"
         : AllVulnerabilities.Count == 0
             ? "Nenhuma vulnerabilidade conhecida nas versões detetadas"
