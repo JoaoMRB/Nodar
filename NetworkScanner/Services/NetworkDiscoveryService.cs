@@ -146,6 +146,7 @@ public static class NetworkDiscoveryService
         var total = discovered.Count;
         var processed = 0;
         var devices = new List<DeviceInfo>();
+        var vulnerabilityService = options.VulnerabilityScan ? new Vulnerabilities.VulnerabilityService() : null;
 
         foreach (var (ip, mac) in discovered.OrderBy(d => d.Key == network.Gateway ? 0 : 1).ThenBy(d => IpToUInt(d.Key)))
         {
@@ -189,9 +190,15 @@ public static class NetworkDiscoveryService
                     services = await ServiceDetectionService.DetectServicesAsync(ip, ports, options.CancellationToken);
                     
                     // Vulnerability scanning
-                    if (options.VulnerabilityScan)
+                    if (vulnerabilityService != null)
                     {
-                        vulnerabilities = await ServiceDetectionService.CheckVulnerabilitiesAsync(services, options.CancellationToken);
+                        options.Progress?.Report(new ScanProgress
+                        {
+                            Percent = percent,
+                            Message = $"A verificar vulnerabilidades em {ip} (NVD)...",
+                            DevicesFound = devices.Count
+                        });
+                        vulnerabilities = await vulnerabilityService.CheckAsync(services, options.CancellationToken);
                     }
                 }
             }
@@ -238,7 +245,8 @@ public static class NetworkDiscoveryService
                 .ThenBy(d => IpToUInt(d.IpAddress))
                 .ToList(),
             ScanMethod = method,
-            Duration = stopwatch.Elapsed
+            Duration = stopwatch.Elapsed,
+            VulnerabilitySourceNote = vulnerabilityService?.BuildSourceNote()
         };
     }
 
