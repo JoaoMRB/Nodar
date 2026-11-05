@@ -111,7 +111,7 @@
 
             <Button Classes="nav" Classes.active="{Binding IsDevicesPage}"
                     Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Devices}">
-              <Grid ColumnDefinitions="Auto,*,Auto">
+              <Grid ColumnDefinitions="16,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Grid}" />
                 <TextBlock Grid.Column="1" Text="{l:T nav.devices}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
                 <Border Grid.Column="2" Classes="chip" Padding="7,1" IsVisible="{Binding HasScanned}">
@@ -122,7 +122,7 @@
 
             <Button Classes="nav" Classes.active="{Binding IsSecurityPage}"
                     Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Security}">
-              <Grid ColumnDefinitions="Auto,*,Auto">
+              <Grid ColumnDefinitions="16,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Shield}" />
                 <TextBlock Grid.Column="1" Text="{l:T nav.security}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
                 <Border Grid.Column="2" Classes="chip" Padding="7,1" Background="#26FF4D6D" IsVisible="{Binding HasVulnerabilityData}">
@@ -133,7 +133,7 @@
 
             <Button Classes="nav" Classes.active="{Binding IsHistoryPage}"
                     Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.History}">
-              <Grid ColumnDefinitions="Auto,*">
+              <Grid ColumnDefinitions="16,*">
                 <Path Classes="icon" Data="{StaticResource Icon.Clock}" />
                 <TextBlock Grid.Column="1" Text="{l:T nav.history}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
               </Grid>
@@ -141,7 +141,7 @@
 
             <Button Classes="nav" Classes.active="{Binding IsWatchlistPage}"
                     Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:Page.Watchlist}">
-              <Grid ColumnDefinitions="Auto,*,Auto">
+              <Grid ColumnDefinitions="16,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Eye}" />
                 <TextBlock Grid.Column="1" Text="{l:T nav.watchlist}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
                 <Border Grid.Column="2" Classes="chip" Padding="7,1" IsVisible="{Binding HasWatchItems}">
@@ -440,7 +440,7 @@
 
                 <!-- Estados vazios -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" IsVisible="{Binding ShowFirstScan}">
-                  <Path Classes="icon spin" Data="M12 3 A9 9 0 0 1 21 12" Stroke="{StaticResource AccentBrush}" Width="28" Height="28" StrokeThickness="2.4" />
+                  <Path Classes="icon spin" Data="M12 3 A9 9 0 0 1 21 12" Stroke="{StaticResource AccentBrush}" MaxWidth="28" MaxHeight="28" StrokeThickness="2.4" />
                   <TextBlock Classes="h2" Text="{l:T empty.searching}" HorizontalAlignment="Center" />
                   <TextBlock Classes="caption" Text="{l:T empty.searching.hint}" HorizontalAlignment="Center" />
                 </StackPanel>
@@ -579,7 +579,7 @@
                                     <Button Classes="link" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenUrlCommand}" CommandParameter="{Binding Url}">
                                       <StackPanel Orientation="Horizontal" Spacing="5">
                                         <TextBlock Classes="mono" Text="{Binding Cve}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                                        <Path Classes="icon sm" Data="{StaticResource Icon.External}" Stroke="{StaticResource TextTertiaryBrush}" Width="11" Height="11" />
+                                        <Path Classes="icon sm" Data="{StaticResource Icon.External}" Stroke="{StaticResource TextTertiaryBrush}" MaxWidth="11" MaxHeight="11" />
                                       </StackPanel>
                                     </Button>
                                     <Border Grid.Column="1" Classes="chip" Background="{Binding SeveritySoftBrush}">
@@ -670,7 +670,7 @@
                             <Button Classes="link" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenUrlCommand}" CommandParameter="{Binding Url}">
                               <StackPanel Orientation="Horizontal" Spacing="6">
                                 <TextBlock Classes="mono" Text="{Binding Cve}" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                                <Path Classes="icon sm" Data="{StaticResource Icon.External}" Stroke="{StaticResource TextTertiaryBrush}" Width="11" Height="11" />
+                                <Path Classes="icon sm" Data="{StaticResource Icon.External}" Stroke="{StaticResource TextTertiaryBrush}" MaxWidth="11" MaxHeight="11" />
                               </StackPanel>
                             </Button>
                             <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding IsKnownExploited}">
@@ -843,7 +843,7 @@
               </StackPanel>
               <Button Grid.Column="2" Classes="flat icon" Width="26" Height="26" VerticalAlignment="Top"
                       Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DismissToastCommand}" CommandParameter="{Binding}">
-                <Path Classes="icon sm" Data="{StaticResource Icon.Close}" Width="10" Height="10" />
+                <Path Classes="icon sm" Data="{StaticResource Icon.Close}" MaxWidth="10" MaxHeight="10" />
               </Button>
             </Grid>
           </Border>
