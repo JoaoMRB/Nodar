@@ -29,6 +29,7 @@ A Windows app built with C# / .NET 9 and an [Avalonia](https://avaloniaui.net/) 
 ### Interface
 - Dark and translucent (Acrylic/Mica on Windows 11), with a sidebar and four views: **Devices**, **Security**, **History** and **Watched**.
 - Device list with an icon and color per type, badges (*Router*, *This PC*, *New*), open ports and vulnerabilities. Search by name, IP, MAC or manufacturer.
+- **Filters** above the list, with counts: by type (computers, phones & tablets, TV, network, printers, smart home…) and by state (vulnerable, watched, new, offline). Only the ones present on your network are shown, and they combine with search.
 - Details panel with the device information, its services and the check status of each one, vulnerabilities (CVSS, active exploitation, link to the NVD) and activity.
 - Scan options in their own panel. Preferences are saved.
 - Unobtrusive in-app notices: no dialogs interrupting you, no focus stealing.

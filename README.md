@@ -29,6 +29,7 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 ### Interface
 - Escura e translúcida (Acrylic/Mica no Windows 11), com barra lateral e quatro vistas: **Dispositivos**, **Segurança**, **Histórico** e **Monitorizados**.
 - Lista de dispositivos com ícone e cor por tipo, selos (*Router*, *Este PC*, *Novo*), portas abertas e vulnerabilidades. Tem pesquisa por nome, IP, MAC ou fabricante.
+- **Filtros** por cima da lista, com contagem: por tipo (computadores, telemóveis e tablets, TV, rede, impressoras, casa inteligente…) e por estado (com vulnerabilidades, monitorizados, novos, offline). Só aparecem os que existem na rede e combinam com a pesquisa.
 - Painel de detalhes com a informação do dispositivo, os serviços e o estado da verificação de cada um, as vulnerabilidades (CVSS, exploração ativa, ligação à NVD) e a atividade.
 - Opções de análise num painel próprio. As preferências ficam guardadas.
 - Avisos discretos dentro da app, sem caixas de diálogo a interromper e sem roubar o foco.
