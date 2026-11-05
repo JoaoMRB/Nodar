@@ -15,8 +15,22 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var window = new MainWindow();
-            window.DataContext = new MainViewModel(new Services.WindowPlatformServices(window));
+            var viewModel = new MainViewModel(new Services.WindowPlatformServices(window));
+            window.DataContext = viewModel;
             desktop.MainWindow = window;
+
+            // Um erro na interface não deve fechar a app: fica registado e é mostrado como aviso.
+            Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                Services.CrashLog.Write(e.Exception, "Erro na interface");
+                viewModel.ReportUnexpectedError(e.Exception);
+                e.Handled = true;
+            };
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+            {
+                Services.CrashLog.Write(e.Exception, "Tarefa em segundo plano");
+                e.SetObserved();
+            };
         }
 
         base.OnFrameworkInitializationCompleted();

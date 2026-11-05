@@ -7,9 +7,10 @@ namespace Nodar.App.ViewModels;
 
 public sealed partial class DeviceItemViewModel : ObservableObject
 {
-    public DeviceItemViewModel(DeviceInfo device, DeviceHistoryEntry? history, bool isGateway, bool isOnline, bool isWatched, bool isNew = false)
+    public DeviceItemViewModel(DeviceInfo device, DeviceHistoryEntry? history, string key, bool isGateway, bool isOnline, bool isWatched, bool isNew = false)
     {
         IsNew = isNew;
+        Key = key;
         Device = device;
         History = history;
         IsGateway = isGateway;
@@ -34,7 +35,8 @@ public sealed partial class DeviceItemViewModel : ObservableObject
 
     public DeviceInfo Device { get; }
     public DeviceHistoryEntry? History { get; }
-    public string Key => DeviceTracker.KeyFor(Device);
+    /// <summary>Identidade no histórico (ver <see cref="DeviceTracker.Key(DeviceInfo)"/>).</summary>
+    public string Key { get; }
 
     public string DisplayName =>
         IsGateway && string.IsNullOrWhiteSpace(Device.Hostname) ? "Router" :

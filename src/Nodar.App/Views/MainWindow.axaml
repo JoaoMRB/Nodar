@@ -181,7 +181,7 @@
 
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="Sub-rede completa" />
-                        <TextBlock Classes="caption" Text="Mais lento; encontra dispositivos silenciosos" TextWrapping="Wrap" /></StackPanel>
+                        <TextBlock Classes="caption" Text="Só para redes grandes (mais de 1024 endereços); as outras são sempre varridas por inteiro" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding DeepScan}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">

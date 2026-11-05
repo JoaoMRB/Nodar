@@ -23,6 +23,7 @@ public sealed partial class MainViewModel : ObservableObject
     private ScanResult? _lastResult;
     private DateTime? _lastScanAt;
     private List<DeviceItemViewModel> _allDevices = [];
+    private IReadOnlyList<DeviceInfo>? _preliminary;
     private bool _loadingSettings;
 
     public MainViewModel(IPlatformServices platform)
@@ -245,6 +246,15 @@ public sealed partial class MainViewModel : ObservableObject
             ScanMessage = p.Message;
         });
 
+        // No primeiro scan, mostrar já os dispositivos encontrados (os detalhes chegam depois).
+        var discovered = new Progress<IReadOnlyList<DeviceInfo>>(list =>
+        {
+            if (_lastResult != null)
+                return;
+            _preliminary = list;
+            RebuildDevices();
+        });
+
         try
         {
             var options = new ScanOptions
@@ -255,6 +265,7 @@ public sealed partial class MainViewModel : ObservableObject
                 ServiceDetection = ServiceDetection,
                 VulnerabilityScan = VulnerabilityScan,
                 Progress = progress,
+                DevicesDiscovered = discovered,
                 CancellationToken = _scanCts.Token
             };
 
@@ -357,12 +368,18 @@ public sealed partial class MainViewModel : ObservableObject
         var gateway = Gateway;
         var items = new List<DeviceItemViewModel>();
 
-        if (_lastResult != null)
+        var source = _lastResult?.Devices ?? _preliminary;
+        if (source != null)
         {
-            foreach (var device in _lastResult.Devices)
+            var usedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var device in source)
             {
                 var history = _tracker.GetHistory(device);
-                items.Add(new DeviceItemViewModel(device, history,
+                // Na lista preliminar o histórico ainda não sabe de MACs partilhados (repetidores): garantir chaves únicas.
+                var key = _tracker.Key(device);
+                if (!usedKeys.Add(key))
+                    usedKeys.Add(key = $"{key}@{device.IpAddress}");
+                items.Add(new DeviceItemViewModel(device, history, key,
                     isGateway: device.IpAddress == gateway, isOnline: true,
                     isWatched: _tracker.FindWatched(device) != null,
                     isNew: _tracker.IsRecentlyNew(history, TimeSpan.FromHours(24))));
@@ -377,9 +394,9 @@ public sealed partial class MainViewModel : ObservableObject
             foreach (var entry in offline)
             {
                 var device = FromHistory(entry);
-                if (onlineKeys.Contains(DeviceTracker.KeyFor(device)))
+                if (onlineKeys.Contains(_tracker.Key(device)))
                     continue;
-                items.Add(new DeviceItemViewModel(device, entry, isGateway: false, isOnline: false,
+                items.Add(new DeviceItemViewModel(device, entry, _tracker.Key(device), isGateway: false, isOnline: false,
                     isWatched: _tracker.FindWatched(device) != null));
             }
         }
@@ -392,7 +409,7 @@ public sealed partial class MainViewModel : ObservableObject
             .ThenBy(d => IpSortKey(d.IpAddress))
             .ToList();
 
-        HasScanned = _lastResult != null;
+        HasScanned = source != null;
         HasDevices = _allDevices.Count > 0;
         OnlineCount = _allDevices.Count(d => d.IsOnline);
         NewCount = _allDevices.Count(d => d.IsNew);
@@ -476,7 +493,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     private DeviceItemViewModel? FindItem(DeviceInfo device) =>
-        _allDevices.FirstOrDefault(d => d.Key == DeviceTracker.KeyFor(device));
+        _allDevices.FirstOrDefault(d => d.Key == _tracker.Key(device));
 
     private static DeviceInfo FromHistory(DeviceHistoryEntry e) => new()
     {
@@ -546,14 +563,16 @@ public sealed partial class MainViewModel : ObservableObject
         RecentEvents.Clear();
         KnownDevices.Clear();
 
-        var onlineKeys = _allDevices.Where(d => d.IsOnline).ToDictionary(d => d.Key);
+        var onlineKeys = _allDevices.Where(d => d.IsOnline)
+            .GroupBy(d => d.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         foreach (var entry in _tracker.History.OrderByDescending(e => e.Status == DeviceTracker.Online).ThenByDescending(e => e.SeenAt))
         {
             var device = FromHistory(entry);
-            var key = DeviceTracker.KeyFor(device);
+            var key = _tracker.Key(device);
             KnownDevices.Add(onlineKeys.TryGetValue(key, out var online)
                 ? online
-                : new DeviceItemViewModel(device, entry, false, entry.Status == DeviceTracker.Online, _tracker.FindWatched(device) != null));
+                : new DeviceItemViewModel(device, entry, key, false, entry.Status == DeviceTracker.Online, _tracker.FindWatched(device) != null));
         }
 
         foreach (var e in _tracker.History
@@ -580,7 +599,7 @@ public sealed partial class MainViewModel : ObservableObject
         var online = _lastResult?.Devices ?? [];
         foreach (var w in _tracker.Watchlist)
         {
-            var isOnline = online.Any(d => DeviceTracker.KeyFor(d) == DeviceTracker.KeyFor(w.MacAddress, w.IpAddress));
+            var isOnline = online.Any(d => _tracker.Key(d) == _tracker.Key(w.MacAddress, w.IpAddress));
             WatchItems.Add(new WatchItemViewModel(w, isOnline, _tracker.Save));
         }
         HasWatchItems = WatchItems.Count > 0;
@@ -670,6 +689,9 @@ public sealed partial class MainViewModel : ObservableObject
 
         DispatcherTimer.RunOnce(() => Toasts.Remove(toast), TimeSpan.FromSeconds(kind == ToastKind.Danger ? 9 : 5));
     }
+
+    public void ReportUnexpectedError(Exception ex) =>
+        Toast("Ocorreu um erro inesperado", $"{ex.Message} (registado em {CrashLog.Directory})", ToastKind.Danger);
 
     [RelayCommand]
     private void DismissToast(ToastViewModel? toast)
