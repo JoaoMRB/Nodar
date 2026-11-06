@@ -16,9 +16,9 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
   <img src="docs/screenshots/dispositivos.png" alt="Lista de dispositivos da rede" width="100%" />
 </p>
 
-| Detalhes de um dispositivo | Segurança |
-|---|---|
-| ![Painel de detalhes com serviços e vulnerabilidades](docs/screenshots/detalhes.png) | ![Vulnerabilidades potenciais da rede](docs/screenshots/seguranca.png) |
+| Detalhes de um dispositivo | Conhecer os teus dispositivos | Segurança |
+|---|---|---|
+| ![Painel de detalhes com serviços e vulnerabilidades](docs/screenshots/detalhes.png) | ![Marcar como meu ou não reconheço, com nome e nota](docs/screenshots/revisao.png) | ![Vulnerabilidades potenciais da rede](docs/screenshots/seguranca.png) |
 
 <sub>Capturas do [modo demonstração](#modo-demonstração): rede fictícia, CVEs reais da NVD.</sub>
 
@@ -59,6 +59,7 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 ### Monitorização
 - **Histórico persistente** de cada dispositivo: quando foi visto pela primeira vez e quando entrou e saiu da rede. Os dispositivos são identificados pelo MAC, por isso uma mudança de IP por DHCP não cria um dispositivo "novo".
 - **Dispositivos novos**: aviso quando aparece um dispositivo que nunca tinha sido visto. O primeiro scan conta como linha de base.
+- **Os teus dispositivos**: no painel de cada dispositivo marcas *É meu* ou *Não reconheço* e podes dar-lhe um nome e uma nota. Há um convite para marcares todos como conhecidos de uma vez. A partir daí o Nodar avisa só dos **desconhecidos** que entram ou voltam à rede, e dos que marcaste como *Não reconheço* sempre que aparecem. Os conhecidos nunca geram este aviso. A lista ganha os filtros *Por rever* e *Suspeitos*, e a pesquisa encontra também o texto das notas. Quem usa endereço Wi-Fi privado (iPhone, Android) pode mudar de MAC por rede e voltar a aparecer por rever.
 - **MAC do router**: guarda o MAC com que o router responde e avisa se mudar. Sozinha, a mudança é um sinal fraco (trocaste de router, ou estás noutra rede com o mesmo endereço, e podes aceitar o MAC). Se outro dispositivo da rede tiver exatamente esse MAC, o alerta é forte: é o rasto típico de ARP spoofing, alguém a fazer-se passar pelo router.
 - **Monitorizados**: tocas na estrela de um dispositivo e recebes um aviso quando ele entra ou sai. Para evitar falsos alarmes com telemóveis em repouso, um dispositivo só é dado como saído depois de falhar dois scans seguidos.
 - **Atualização automática** com intervalo configurável (1 a 15 minutos).
@@ -149,6 +150,7 @@ Cada serviço mostra o estado da verificação: *verificado*, *verificado com ca
 - A inspeção de TLS fica na rede local: um handshake sem validar a cadeia e sem enviar dados, mais três `ClientHello` (SSL 3.0, TLS 1.0 e 1.1) só para ver se o servidor responde, sem troca de chaves. Faz parte da opção *Serviços e versões*.
 - A leitura UPnP do router (portas abertas e endereço externo) é uma consulta anónima e só de leitura ao próprio router, na rede local: só se fala com o IP do router, nunca se altera nada e não há credenciais. Pode ser desligada nas Opções.
 - **"O que a internet vê"** só corre quando carregas no botão, e é a única função que envia algo para fora do PC: o teu **endereço público**, ao Shodan InternetDB (gratuito, sem conta). O endereço vem do próprio router; se ele não o disser, pergunta-se também a `api.ipify.org`. Se o endereço do router não for público (CGNAT ou duplo NAT), não se consulta nada. Os dados do Shodan são da última vez que ele passou pelo teu endereço e podem ter dias.
+- **Os nomes, as notas e o estado de cada dispositivo** (*É meu*, *Não reconheço*) ficam só em `%LOCALAPPDATA%\Nodar\known-devices.json`, no teu PC. Nunca são enviados para fora, nem entram nos relatórios exportados, e não fazem parte do repositório.
 - Os dados ficam em cache em `%LOCALAPPDATA%\Nodar\cache\`: a NVD durante 3 dias e o KEV durante 1. Sem internet, é usada a cache existente e a app avisa.
 
 ### Chave da NVD (opcional)
@@ -167,6 +169,7 @@ src/Nodar.App/                       # Interface (Avalonia, MVVM)
 │   ├── MainViewModel.cs             # Scan, lista de dispositivos, filtros e navegação
 │   ├── SettingsViewModel.cs         # Preferências (opções de scan, segundo plano, idioma)
 │   ├── Security/History/WatchlistViewModel.cs  # Vistas Segurança, Histórico e Monitorizados
+│   ├── DeviceReviewViewModel.cs     # É meu / não reconheço, nome e nota de cada dispositivo
 │   ├── ExposureViewModel.cs         # Portas abertas pelo router, MAC do router, o que a internet vê
 │   └── ToastHost.cs                 # Avisos dentro da app
 ├── Localization/TExtension.cs       # Extensão {l:T chave} para textos traduzidos
@@ -177,6 +180,7 @@ src/Nodar.Core/                      # Lógica, sem interface gráfica
 ├── Models/NetworkModels.cs          # Modelos (dispositivo, rede, histórico, scan)
 ├── Localization/                    # Traduções: pt.json, en.json (mesmas chaves, verificado nos testes)
 ├── Monitoring/DeviceTracker.cs      # Histórico, dispositivos novos e monitorizados
+├── Monitoring/KnownDevices.cs       # Conhecidos, suspeitos, nomes e notas (só neste PC)
 ├── Monitoring/GatewayGuard.cs       # MAC do router: deteta mudanças e ARP spoofing
 ├── Monitoring/PortMappingTracker.cs # Portas abertas pelo router: o que é novo e desde quando
 ├── Settings/AppSettings.cs          # Preferências
@@ -218,7 +222,7 @@ tools/Screenshots/                   # Gera os screenshots do README (headless, 
 docs/screenshots/                    # Screenshots do README
 ```
 
-Os dados locais (histórico, lista de monitorização, MAC do router, portas abertas conhecidas, preferências e cache de vulnerabilidades) ficam em `%LOCALAPPDATA%\Nodar\`.
+Os dados locais (histórico, lista de monitorização, **dispositivos conhecidos com os nomes e notas que escreveste**, MAC do router, portas abertas conhecidas, preferências e cache de vulnerabilidades) ficam em `%LOCALAPPDATA%\Nodar\`.
 
 ---
 
@@ -245,7 +249,7 @@ Os dados locais (histórico, lista de monitorização, MAC do router, portas abe
 - [x] Interface moderna (Avalonia) e lógica separada em `Nodar.Core`
 - [x] Notificações do Windows e monitorização em segundo plano (bandeja do sistema)
 - [x] Portas abertas pelo router (UPnP), alerta de MAC do router e "o que a internet vê" (Shodan)
-- [ ] Nomes personalizados e "dispositivos de confiança"
+- [x] Nomes, notas e "dispositivos de confiança" (conhecidos, suspeitos, por rever)
 - [x] Identificação por Bonjour/mDNS e registo de fabricantes do IEEE
 - [x] Identificação por SSDP/UPnP e NetBIOS
 - [x] Ícone da aplicação

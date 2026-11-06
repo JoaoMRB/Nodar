@@ -16,9 +16,9 @@ A Windows app built with C# / .NET 9 and an [Avalonia](https://avaloniaui.net/) 
   <img src="docs/screenshots/en/dispositivos.png" alt="List of devices on the network" width="100%" />
 </p>
 
-| Device details | Security |
-|---|---|
-| ![Details panel with services and vulnerabilities](docs/screenshots/en/detalhes.png) | ![Potential vulnerabilities on the network](docs/screenshots/en/seguranca.png) |
+| Device details | Knowing your devices | Security |
+|---|---|---|
+| ![Details panel with services and vulnerabilities](docs/screenshots/en/detalhes.png) | ![Mark as mine or unrecognised, with a name and note](docs/screenshots/en/revisao.png) | ![Potential vulnerabilities on the network](docs/screenshots/en/seguranca.png) |
 
 <sub>Captured in [demo mode](#demo-mode): a fictional network with real CVEs from the NVD.</sub>
 
@@ -60,6 +60,7 @@ A Windows app built with C# / .NET 9 and an [Avalonia](https://avaloniaui.net/) 
 - **Persistent history** of every device: when it was first seen and when it joined and left. Devices are identified by MAC, so a new DHCP address doesn't create a "new" device.
 - **New devices**: a notice when a device that has never been seen before appears. The first scan is the baseline.
 - **Router MAC**: remembers the MAC the router answers with and warns if it changes. On its own, a change is a weak signal (you replaced the router, or you're on another network with the same address, and you can accept the MAC). If another device on the network has exactly that MAC, the alert is strong: the typical trace of ARP spoofing, someone impersonating the router.
+- **Your devices**: in each device's panel you mark *It's mine* or *I don't recognise it* and can give it a name and a note. There's a prompt to mark everything as known in one go. From then on Nodar only alerts you about **unknown** devices that join or come back, and about the ones you marked *I don't recognise it* every time they show up. Known devices never raise this alert. The list gains the *To review* and *Suspicious* filters, and search also matches the text of your notes. Devices using a private Wi-Fi address (iPhone, Android) may change MAC per network and show up as to review again.
 - **Watched devices**: tap a device's star and get notified when it joins or leaves. To avoid false alarms from sleeping phones, a device only counts as gone after missing two scans in a row.
 - **Auto refresh** with a configurable interval (1 to 15 minutes).
 - **Windows notifications** (Action Center) when the window isn't visible: new devices (several are grouped into one notification), and watched devices joining or leaving. Clicking the notification opens Nodar.
@@ -149,6 +150,7 @@ Each service shows its check status: *checked*, *checked with cached data*, *ver
 - Reading the router's UPnP (open ports and external address) is an anonymous, read-only query to the router itself, on the local network: only the router's IP is contacted, nothing is ever changed and there are no credentials. It can be turned off in the Options.
 - **"What the internet sees"** only runs when you press the button, and it's the only feature that sends something off your PC: your **public address**, to the Shodan InternetDB (free, no account). The address comes from the router itself; if it doesn't say, `api.ipify.org` is asked as well. If the router's address isn't public (CGNAT or double NAT), nothing is looked up. Shodan's data is from its last visit to your address and may be days old.
 - ARP, Bonjour/mDNS, SSDP and NetBIOS queries stay on your local network. The UPnP descriptor is only read from the device that announced it, over HTTP on the local network, with size and time limits and without DTD processing (XXE protection).
+- **Each device's name, note and state** (*It's mine*, *I don't recognise it*) stay only in `%LOCALAPPDATA%\Nodar\known-devices.json`, on your PC. They are never sent anywhere, never included in exported reports, and are not part of the repository.
 - Data is cached in `%LOCALAPPDATA%\Nodar\cache\`: NVD data for 3 days, KEV for 1. Without internet, the existing cache is used and the app tells you.
 
 ### NVD API key (optional)
@@ -167,6 +169,7 @@ src/Nodar.App/                       # Interface (Avalonia, MVVM)
 │   ├── MainViewModel.cs             # Scan, device list, filters and navigation
 │   ├── SettingsViewModel.cs         # Preferences (scan options, background, language)
 │   ├── Security/History/WatchlistViewModel.cs  # Security, History and Watchlist views
+│   ├── DeviceReviewViewModel.cs     # It's mine / don't recognise, name and note of each device
 │   ├── ExposureViewModel.cs         # Ports opened by the router, router MAC, what the internet sees
 │   └── ToastHost.cs                 # In-app notices
 ├── Localization/TExtension.cs       # {l:T key} markup extension for translated text
@@ -177,6 +180,7 @@ src/Nodar.Core/                      # Logic, no UI
 ├── Models/NetworkModels.cs          # Models (device, network, history, scan)
 ├── Localization/                    # Translations: pt.json, en.json (same keys, enforced by tests)
 ├── Monitoring/DeviceTracker.cs      # History, new and watched devices
+├── Monitoring/KnownDevices.cs       # Known, suspicious, names and notes (this PC only)
 ├── Monitoring/GatewayGuard.cs       # Router MAC: detects changes and ARP spoofing
 ├── Monitoring/PortMappingTracker.cs # Ports opened by the router: what's new and since when
 ├── Settings/AppSettings.cs          # Preferences
@@ -218,7 +222,7 @@ tools/Screenshots/                   # Generates the README screenshots (headles
 docs/screenshots/                    # README screenshots (Portuguese; English in en/)
 ```
 
-Local data (history, watchlist, router MAC, known open ports, preferences and vulnerability cache) lives in `%LOCALAPPDATA%\Nodar\`.
+Local data (history, watchlist, **known devices with the names and notes you wrote**, router MAC, known open ports, preferences and vulnerability cache) lives in `%LOCALAPPDATA%\Nodar\`.
 
 ---
 
@@ -245,7 +249,7 @@ Local data (history, watchlist, router MAC, known open ports, preferences and vu
 - [x] Modern interface (Avalonia) with logic split into `Nodar.Core`
 - [x] Windows notifications and background monitoring (system tray)
 - [x] Ports opened by the router (UPnP), router MAC alert and "what the internet sees" (Shodan)
-- [ ] Custom names and "trusted devices"
+- [x] Names, notes and "trusted devices" (known, suspicious, to review)
 - [x] Identification via Bonjour/mDNS and the IEEE manufacturer registry
 - [x] Identification via SSDP/UPnP and NetBIOS
 - [x] App icon
