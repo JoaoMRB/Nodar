@@ -1,6 +1,7 @@
 using Nodar.Core;
 using Nodar.Core.Models;
 using static Nodar.Core.Localization.Loc;
+using Nodar.Core.Services;
 using Nodar.Core.Services.Vulnerabilities;
 
 namespace Nodar.App.Services;
@@ -49,15 +50,31 @@ public static class DemoData
             IsDistroPackage = distro.Length > 0, DistroName = distro
         };
 
+        // Certificado autoassinado (o do router e o do NAS são o mesmo: um certificado de fábrica partilhado).
+        static ServiceInfo WithCert(ServiceInfo service, string name, string protocol, DateTime notAfter, params string[] legacy)
+        {
+            var tls = new TlsInfo
+            {
+                Protocol = protocol, Subject = name, Issuer = name, SelfSigned = true,
+                NotBefore = notAfter.AddYears(-10), NotAfter = notAfter, Fingerprint = "DEMO-FACTORY-CERTIFICATE",
+                KeyAlgorithm = "RSA", KeySize = 2048, SignatureAlgorithm = "sha256RSA"
+            };
+            tls.LegacyProtocols.AddRange(legacy);
+            service.Tls = tls;
+            return service;
+        }
+
         var specs = new (DeviceInfo Device, List<ServiceInfo> Services)[]
         {
             (new DeviceInfo { IpAddress = "192.168.1.1", MacAddress = "D0:CF:0E:00:00:01", Hostname = "router", Model = "TP-Link Archer AX55", Vendor = "TP-Link", DeviceType = "Router", OpenPorts = "53, 80, 443, 49152" },
-             [Svc(53, "DNS", "dnsmasq", "dnsmasq", "2.78"), Svc(80, "HTTP", "lighttpd", "lighttpd", "1.4.45"), Svc(49152, "UPnP", "miniupnpd", "MiniUPnPd", "1.9")]),
+             [Svc(53, "DNS", "dnsmasq", "dnsmasq", "2.78"), Svc(80, "HTTP", "lighttpd", "lighttpd", "1.4.45"),
+              WithCert(Svc(443, "HTTPS"), "router.local", "TLS 1.2", new DateTime(2031, 5, 12), "TLS 1.0", "TLS 1.1"),
+              Svc(49152, "UPnP", "miniupnpd", "MiniUPnPd", "1.9")]),
             (new DeviceInfo { IpAddress = "192.168.1.23", MacAddress = "3C:22:FB:10:4A:01", Hostname = "MacBook-Pro-da-Ana.local", FriendlyName = T("demo.name.macbook"), Model = "MacBook Pro", ModelId = "MacBookPro18,3", Vendor = "Apple", DeviceType = "Computador", IsLocalDevice = true, OpenPorts = "" }, []),
             (new DeviceInfo { IpAddress = "192.168.1.40", MacAddress = "DC:A6:32:7B:00:12", Hostname = "homelab", Vendor = "Raspberry Pi", DeviceType = "Servidor", OpenPorts = "22, 80, 6379" },
              [Svc(22, "SSH", "openssh", "OpenSSH", "8.9p1", "Ubuntu"), Svc(80, "HTTP", "nginx", "nginx", "1.18.0", "Ubuntu"), Svc(6379, "Redis", "redis", "Redis", "6.0.16")]),
             (new DeviceInfo { IpAddress = "192.168.1.52", MacAddress = "00:11:32:AB:CD:EF", Hostname = "nas", Vendor = "Synology", DeviceType = "Servidor", OpenPorts = "21, 443" },
-             [Svc(21, "FTP", "proftpd", "ProFTPD", "1.3.5"), Svc(443, "HTTPS", "nginx", "nginx", "1.20.1")]),
+             [Svc(21, "FTP", "proftpd", "ProFTPD", "1.3.5"), WithCert(Svc(443, "HTTPS", "nginx", "nginx", "1.20.1"), "router.local", "TLS 1.3", new DateTime(2024, 3, 2))]),
             (new DeviceInfo { IpAddress = "192.168.1.61", MacAddress = "F4:F5:D8:00:11:22", Hostname = "GoogleTV-sala", FriendlyName = T("demo.name.tv"), Model = T("demo.model.chromecast"), Vendor = "Google", DeviceType = "TV", OpenPorts = "8008" }, []),
             (new DeviceInfo { IpAddress = "192.168.1.77", MacAddress = "64:EB:8C:33:44:55", Hostname = "EPSON-escritorio", FriendlyName = T("demo.name.printer"), Model = "Epson ET-2850 Series", Vendor = "Epson", DeviceType = "Impressora", OpenPorts = "80, 631" },
              [Svc(80, "HTTP")]),
@@ -81,6 +98,7 @@ public static class DemoData
             });
         }
 
+        TlsAnalyzer.MarkShared(devices);
         progress?.Report(new ScanProgress { Percent = 100, Message = T("scan.progress.done") });
         return new ScanResult
         {

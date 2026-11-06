@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Nodar.Core.Models;
+using Nodar.Core.Services;
 using static Nodar.Core.Localization.Loc;
 
 namespace Nodar.App.ViewModels;
@@ -53,7 +55,49 @@ public sealed partial class SecurityViewModel : ObservableObject
         HighCount = AllVulnerabilities.Count(v => v.Severity == "High");
         MediumLowCount = AllVulnerabilities.Count - CriticalCount - HighCount;
         HasVulnerabilityData = AllVulnerabilities.Count > 0;
+        RenderTls(devices);
         Refresh();
+    }
+
+    // ================================================================ Certificados e TLS
+
+    public ObservableCollection<TlsFindingItemViewModel> TlsFindings { get; } = [];
+
+    /// <summary>Algum serviço TLS foi inspecionado no último scan.</summary>
+    [ObservableProperty] private bool _showTls;
+    [ObservableProperty] private bool _hasTlsFindings;
+    [ObservableProperty] private string _tlsHeadline = "";
+    [ObservableProperty] private string _tlsDetail = "";
+    [ObservableProperty] private IBrush _tlsBrush = Visuals.SeverityBrush("Low");
+    [ObservableProperty] private IBrush _tlsSoftBrush = Visuals.SeveritySoftBrush("Low");
+
+    private void RenderTls(IReadOnlyList<DeviceItemViewModel> devices)
+    {
+        var online = devices.Where(d => d.IsOnline).ToList();
+        var names = online.GroupBy(d => d.IpAddress).ToDictionary(g => g.Key, g => g.First().DisplayName);
+        var now = DateTime.Now;
+        var inspected = 0;
+        var findings = new List<TlsFindingItemViewModel>();
+        foreach (var device in online)
+            foreach (var service in device.Device.Services.Where(s => s.Tls != null))
+            {
+                inspected++;
+                findings.AddRange(TlsAnalyzer.Analyze(service.Tls!, service.Port, now)
+                    .Select(f => new TlsFindingItemViewModel(f, device.DisplayName, device.IpAddress, names)));
+            }
+
+        TlsFindings.Clear();
+        foreach (var finding in findings.OrderByDescending(f => f.SeverityRank).ThenBy(f => f.Where, StringComparer.Ordinal))
+            TlsFindings.Add(finding);
+
+        ShowTls = inspected > 0;
+        HasTlsFindings = TlsFindings.Count > 0;
+        TlsHeadline = HasTlsFindings ? Plural("tls.count", TlsFindings.Count) : T("tls.ok");
+        TlsDetail = HasTlsFindings ? T("tls.hint") : Plural("tls.checked", inspected);
+
+        var worst = HasTlsFindings ? TlsFindings[0].Severity : "Low";
+        TlsBrush = Visuals.SeverityBrush(worst);
+        TlsSoftBrush = Visuals.SeveritySoftBrush(worst);
     }
 
     /// <summary>Volta a ler os textos e os estados que dependem do resultado e do idioma.</summary>

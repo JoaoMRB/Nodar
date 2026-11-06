@@ -63,6 +63,9 @@ public sealed class ServiceInfo
     public string DistroName { get; set; } = "";
 
     public VulnerabilityCheckStatus VulnerabilityCheck { get; set; } = VulnerabilityCheckStatus.NotRequested;
+
+    /// <summary>Certificado e protocolos, se o serviço fala TLS e foi inspecionado.</summary>
+    public TlsInfo? Tls { get; set; }
 }
 
 public enum VulnerabilityCheckStatus

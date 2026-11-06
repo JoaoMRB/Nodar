@@ -147,6 +147,27 @@ public sealed class ServiceItemViewModel(ServiceInfo service)
 
     public bool HasCheck => CheckText.Length > 0;
 
+    /// <summary>"TLS 1.3 · autoassinado · válido até 2038" e, se for o caso, os protocolos antigos que aceita.</summary>
+    public string TlsText
+    {
+        get
+        {
+            if (service.Tls is not { } tls)
+                return "";
+            var parts = new List<string>
+            {
+                tls.Protocol,
+                tls.SelfSigned ? T("tls.selfSigned") : F("tls.issuedBy", tls.Issuer),
+                F("tls.validUntil", tls.NotAfter.ToString("d", Instance.Culture))
+            };
+            if (tls.LegacyProtocols.Count > 0)
+                parts.Add(F("tls.accepts", string.Join(", ", tls.LegacyProtocols)));
+            return string.Join(" · ", parts.Where(p => p.Length > 0));
+        }
+    }
+
+    public bool HasTls => service.Tls != null;
+
     public IBrush CheckBrush => service.VulnerabilityCheck switch
     {
         VulnerabilityCheckStatus.Checked => Visuals.OnlineBrush,
@@ -175,6 +196,47 @@ public sealed class VulnerabilityItemViewModel(VulnerabilityInfo vuln, string de
     public bool IsKnownExploited => vuln.IsKnownExploited;
     public string KevText => vuln.KnownRansomwareUse ? T("vuln.exploitedRansomware") : T("security.exploited");
     public bool MayBeBackported => vuln.MayBeBackported;
+}
+
+/// <summary>Um problema de certificado ou de TLS num serviço de um dispositivo.</summary>
+public sealed class TlsFindingItemViewModel(TlsFinding finding, string deviceName, string deviceIp, IReadOnlyDictionary<string, string> namesByIp)
+{
+    public string Title => finding.Kind switch
+    {
+        TlsFindingKind.Expired => T("tls.expired"),
+        TlsFindingKind.NotYetValid => T("tls.notYetValid"),
+        TlsFindingKind.ExpiresSoon => T("tls.expiresSoon"),
+        TlsFindingKind.LegacyProtocol => T("tls.legacy"),
+        TlsFindingKind.WeakKey => T("tls.weakKey"),
+        TlsFindingKind.WeakSignature => T("tls.weakSignature"),
+        _ => T("tls.shared")
+    };
+
+    public string Detail
+    {
+        get
+        {
+            var date = finding.When?.ToString("d", Instance.Culture) ?? "";
+            return finding.Kind switch
+            {
+                TlsFindingKind.Expired => F("tls.expired.detail", date),
+                TlsFindingKind.NotYetValid => F("tls.notYetValid.detail", date),
+                TlsFindingKind.ExpiresSoon => F("tls.expiresSoon.detail", date),
+                TlsFindingKind.LegacyProtocol => F("tls.legacy.detail", finding.Arg),
+                TlsFindingKind.WeakKey => F("tls.weakKey.detail", finding.Arg, finding.Number),
+                TlsFindingKind.WeakSignature => F("tls.weakSignature.detail", finding.Arg),
+                _ => F("tls.shared.detail", string.Join(", ", finding.Arg.Split(", ")
+                    .Select(ip => namesByIp.TryGetValue(ip, out var name) && name != ip ? $"{name} ({ip})" : ip)))
+            };
+        }
+    }
+
+    public string Where => $"{deviceName} · {deviceIp}:{finding.Port}";
+    public string Severity => finding.Severity;
+    public string SeverityLabel => Visuals.SeverityLabel(finding.Severity);
+    public int SeverityRank => Visuals.SeverityRank(finding.Severity);
+    public IBrush SeverityBrush => Visuals.SeverityBrush(finding.Severity);
+    public IBrush SeveritySoftBrush => Visuals.SeveritySoftBrush(finding.Severity);
 }
 
 public sealed class HistoryEventViewModel(DeviceHistoryEvent e, string deviceName)

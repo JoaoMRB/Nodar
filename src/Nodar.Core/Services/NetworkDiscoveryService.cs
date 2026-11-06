@@ -164,6 +164,7 @@ public static class NetworkDiscoveryService
                 });
             });
         var devices = analyzed.ToList();
+        TlsAnalyzer.MarkShared(devices); // o mesmo certificado autoassinado em vários dispositivos
         var upnp = upnpTask == null ? null : await upnpTask;
 
         // Entradas que vinham só da cache ARP e que o sistema entretanto deu como inalcançáveis: já saíram.
@@ -264,7 +265,11 @@ public static class NetworkDiscoveryService
             openPorts = ports.Count > 0 ? string.Join(", ", ports) : "";
 
             if (options.ServiceDetection && ports.Count > 0)
+            {
                 services = await ServiceDetectionService.DetectServicesAsync(ip, ports, ct);
+                // Certificado e protocolos dos serviços TLS (HTTPS, IMAPS…).
+                await TlsInspector.AttachAsync(ip, services, ct);
+            }
         }
 
         // UPnP (SSDP, UDP 1900): o cabeçalho SERVER anuncia a pilha UPnP (ex.: libupnp 1.6.21 em routers).
