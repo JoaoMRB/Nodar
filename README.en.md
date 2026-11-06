@@ -216,7 +216,6 @@ tests/Nodar.App.Tests/               # Interface tests (Avalonia headless, isola
 tools/IconGenerator/                 # Generates the app icon
 tools/Screenshots/                   # Generates the README screenshots (headless, demo mode)
 docs/screenshots/                    # README screenshots (Portuguese; English in en/)
-archive/python-web/                  # Original Python web prototype (no longer maintained)
 ```
 
 Local data (history, watchlist, router MAC, known open ports, preferences and vulnerability cache) lives in `%LOCALAPPDATA%\Nodar\`.
@@ -259,6 +258,15 @@ Local data (history, watchlist, router MAC, known open ports, preferences and vu
 ## Responsible use
 
 This tool is for **networks you own or are explicitly authorized to scan**. Port and vulnerability scanning of third-party networks without permission may be illegal in your country. The author accepts no liability for misuse.
+
+---
+
+## Data sources
+
+- This product uses data from the [NVD](https://nvd.nist.gov/) (NIST) API but is not endorsed or certified by the NVD.
+- The known-exploited-vulnerabilities catalog is from [CISA](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) (KEV).
+- Manufacturers come from the public [IEEE](https://standards-oui.ieee.org/) registry.
+- "What the internet sees" results come from the [Shodan InternetDB](https://internetdb.shodan.io/), and the public address may be looked up at `api.ipify.org`.
 
 ---
 

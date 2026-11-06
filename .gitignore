@@ -10,12 +10,6 @@ dist/
 publish/
 *.pdb
 
-# Python (arquivo legado)
-venv/
-.venv/
-__pycache__/
-*.pyc
-
 # Ambiente / editor
 .env
 .vscode/

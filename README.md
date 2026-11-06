@@ -216,7 +216,6 @@ tests/Nodar.App.Tests/               # Testes da interface (Avalonia headless, d
 tools/IconGenerator/                 # Gera o ícone da app
 tools/Screenshots/                   # Gera os screenshots do README (headless, modo demonstração)
 docs/screenshots/                    # Screenshots do README
-archive/python-web/                  # Protótipo web original em Python (não é mantido)
 ```
 
 Os dados locais (histórico, lista de monitorização, MAC do router, portas abertas conhecidas, preferências e cache de vulnerabilidades) ficam em `%LOCALAPPDATA%\Nodar\`.
@@ -259,6 +258,15 @@ Os dados locais (histórico, lista de monitorização, MAC do router, portas abe
 ## Uso responsável
 
 Esta ferramenta é para **redes que são tuas ou que tens autorização explícita para analisar**. Fazer scan de portas e vulnerabilidades em redes de terceiros sem permissão pode ser ilegal no teu país. O autor não se responsabiliza pelo uso indevido.
+
+---
+
+## Fontes de dados
+
+- Este produto usa dados da API da [NVD](https://nvd.nist.gov/) (NIST), mas não é endossado nem certificado pela NVD.
+- O catálogo de vulnerabilidades exploradas é da [CISA](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) (KEV).
+- Os fabricantes vêm do registo público do [IEEE](https://standards-oui.ieee.org/).
+- Os resultados de "O que a internet vê" vêm do [Shodan InternetDB](https://internetdb.shodan.io/), e o endereço público pode ser obtido em `api.ipify.org`.
 
 ---
 
