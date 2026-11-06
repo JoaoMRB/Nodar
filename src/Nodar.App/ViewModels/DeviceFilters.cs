@@ -1,5 +1,6 @@
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Nodar.Core.Models;
 using static Nodar.Core.Localization.Loc;
 
 namespace Nodar.App.ViewModels;
@@ -17,7 +18,7 @@ public static class DeviceFilters
         ["computers", "phones", "tv", "network", "printers", "smarthome", "cameras", "consoles", "servers", "other"];
 
     // Filtros por estado (aparecem depois dos tipos, só quando há algum dispositivo nessa situação).
-    public static readonly string[] StateFilters = ["vulnerable", "watched", "new", "offline"];
+    public static readonly string[] StateFilters = ["suspicious", "unreviewed", "vulnerable", "watched", "new", "offline"];
 
     /// <summary>Grupo de um dispositivo a partir do tipo guardado no Core.</summary>
     public static string GroupOf(string deviceType, bool isGateway, bool isLocal)
@@ -42,6 +43,8 @@ public static class DeviceFilters
     public static bool Matches(DeviceItemViewModel device, string filter) => filter switch
     {
         All or "" => true,
+        "suspicious" => device.Attention == DeviceAttention.Suspicious,
+        "unreviewed" => device.Attention == DeviceAttention.Unknown,
         "vulnerable" => device.HasVulnerabilities,
         "watched" => device.IsWatched,
         "new" => device.IsNew,
@@ -60,6 +63,8 @@ public static class DeviceFilters
         "cameras" => "Icon.Camera",
         "consoles" => "Icon.Gamepad",
         "servers" => "Icon.Server",
+        "suspicious" => "Icon.Alert",
+        "unreviewed" => "Icon.Eye",
         "vulnerable" => "Icon.Shield",
         "watched" => "Icon.Star",
         "new" => "Icon.Sparkle",

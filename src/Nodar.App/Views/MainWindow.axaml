@@ -315,7 +315,7 @@
 
           <!-- ============ Dispositivos -->
           <Grid IsVisible="{Binding IsDevicesPage}" ColumnDefinitions="*,Auto">
-            <Grid RowDefinitions="Auto,Auto,*" Margin="32,0,28,24">
+            <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="32,0,28,24">
 
               <!-- Estatísticas -->
               <UniformGrid Columns="4" Margin="-6,0,-6,18">
@@ -366,7 +366,24 @@
               </UniformGrid>
 
               <!-- Filtros por tipo e estado -->
-              <ItemsControl Grid.Row="1" ItemsSource="{Binding FilterChips}" IsVisible="{Binding HasFilterChips}" Margin="0,0,0,14">
+              <!-- Convite de primeira utilização: dizer quais são os teus dispositivos -->
+              <Border Grid.Row="1" Classes="card" Padding="16,12" Margin="0,0,0,14" Background="#147C6CFF" BorderBrush="#337C6CFF"
+                      IsVisible="{Binding Review.ShowPrompt}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                  <Path Classes="icon" Data="{StaticResource Icon.ShieldCheck}" Stroke="#A79CFF" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="caption" Margin="12,0" VerticalAlignment="Center" TextWrapping="Wrap"
+                             Text="{Binding Review.PromptText}" />
+                  <Button Grid.Column="2" Classes="primary" Command="{Binding Review.MarkAllKnownCommand}">
+                    <TextBlock Text="{l:T review.markAll}" />
+                  </Button>
+                  <Button Grid.Column="3" Classes="flat icon" Margin="6,0,0,0" ToolTip.Tip="{l:T review.notNow}"
+                          Command="{Binding Review.DismissPromptCommand}">
+                    <Path Classes="icon sm" Data="{StaticResource Icon.Close}" />
+                  </Button>
+                </Grid>
+              </Border>
+
+              <ItemsControl Grid.Row="2" ItemsSource="{Binding FilterChips}" IsVisible="{Binding HasFilterChips}" Margin="0,0,0,14">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><WrapPanel ItemSpacing="8" LineSpacing="8" /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
@@ -389,7 +406,7 @@
               </ItemsControl>
 
               <!-- Lista -->
-              <Panel Grid.Row="2">
+              <Panel Grid.Row="3">
                 <ListBox Classes="clean" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                   <ListBox.ItemTemplate>
@@ -411,6 +428,9 @@
                               </Border>
                               <Border Classes="chip" Padding="7,1" Background="#2634D399" IsVisible="{Binding IsNew}">
                                 <TextBlock Text="{l:T badge.new}" Foreground="#6EE7B7" />
+                              </Border>
+                              <Border Classes="chip" Padding="7,1" Background="{Binding TrustBadgeSoftBrush}" IsVisible="{Binding HasTrustBadge}">
+                                <TextBlock Text="{Binding TrustBadge}" Foreground="{Binding TrustBadgeBrush}" />
                               </Border>
                             </StackPanel>
                             <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
@@ -514,6 +534,48 @@
 
                 <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
                   <StackPanel Spacing="22" Margin="22,0,22,22">
+
+                    <!-- Este dispositivo: é meu / não reconheço, nome e nota (ficam só neste PC) -->
+                    <Border Classes="card" Padding="16,14" DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Review}">
+                      <StackPanel x:DataType="vm:DeviceReviewViewModel" Spacing="12">
+                        <StackPanel Spacing="2">
+                          <TextBlock Classes="overline" Text="{l:T review.title}" />
+                          <TextBlock Classes="caption" Text="{l:T review.hint}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <WrapPanel ItemSpacing="6" LineSpacing="6">
+                          <Button Classes="filter" Classes.selected="{Binding IsKnown}"
+                                  Command="{Binding SetTrustCommand}" CommandParameter="known">
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                              <Path Classes="icon sm" Data="{StaticResource Icon.Check}" />
+                              <TextBlock Text="{l:T trust.known}" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                            </StackPanel>
+                          </Button>
+                          <Button Classes="filter" Classes.selected="{Binding IsUnreviewed}"
+                                  Command="{Binding SetTrustCommand}" CommandParameter="unreviewed">
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                              <Path Classes="icon sm" Data="{StaticResource Icon.Eye}" />
+                              <TextBlock Text="{l:T trust.unreviewed}" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                            </StackPanel>
+                          </Button>
+                          <Button Classes="filter" Classes.selected="{Binding IsSuspicious}"
+                                  Command="{Binding SetTrustCommand}" CommandParameter="suspicious">
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                              <Path Classes="icon sm" Data="{StaticResource Icon.Alert}" />
+                              <TextBlock Text="{l:T trust.suspicious}" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
+                            </StackPanel>
+                          </Button>
+                        </WrapPanel>
+                        <TextBox Classes="field" Watermark="{l:T review.name.watermark}" Text="{Binding EditName}" MaxLength="60" />
+                        <TextBox Classes="field" Watermark="{l:T review.note.watermark}" Text="{Binding EditNote}" MaxLength="500"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock Classes="caption tertiary" Text="{l:T review.privacy}" TextWrapping="Wrap" FontSize="11.5" VerticalAlignment="Center" />
+                          <Button Grid.Column="1" Classes="primary" Command="{Binding SaveDetailsCommand}" IsEnabled="{Binding IsDirty}" Margin="10,0,0,0">
+                            <TextBlock Text="{l:T review.save}" />
+                          </Button>
+                        </Grid>
+                      </StackPanel>
+                    </Border>
 
                     <!-- Informação -->
                     <Border Classes="card" Padding="16,6">

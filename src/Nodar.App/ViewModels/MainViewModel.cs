@@ -23,6 +23,7 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly IPlatformServices _platform;
     private readonly DeviceTracker _tracker;
+    private readonly KnownDevices _known;
     private readonly DispatcherTimer _refreshTimer = new();
     private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private CancellationTokenSource? _scanCts;
@@ -37,6 +38,13 @@ public sealed partial class MainViewModel : ObservableObject
         var dataDirectory = DemoData.IsEnabled ? DemoData.DataDirectory : DeviceTracker.DefaultDataDirectory;
         _tracker = new DeviceTracker(dataDirectory);
         _tracker.Load();
+
+        // O que o utilizador decidiu sobre cada dispositivo (conhecido, suspeito, nome, nota): só neste PC.
+        _known = new KnownDevices(dataDirectory);
+        _known.Load();
+        Review = new DeviceReviewViewModel(_known);
+        Review.Changed += RebuildDevices;
+        Review.AllMarkedKnown += count => Toast(T("review.marked"), Plural("review.marked.hint", count), ToastKind.Success);
 
         // As preferências são carregadas (e o idioma aplicado) antes de ouvir mudanças de idioma.
         Settings = new SettingsViewModel(AppSettings.Load());
@@ -53,7 +61,7 @@ public sealed partial class MainViewModel : ObservableObject
         portMappings.Load();
         Exposure = new ExposureViewModel(gatewayGuard, portMappings, DemoData.IsEnabled ? DemoData.LookupInternetAsync : null);
         Exposure.GatewayTrusted += () => Toast(T("toast.gateway.trusted"), T("toast.gateway.trusted.hint"), ToastKind.Success);
-        History = new HistoryViewModel(_tracker);
+        History = new HistoryViewModel(_tracker, _known);
         Watchlist = new WatchlistViewModel(_tracker);
 
         IsAdmin = DemoData.IsEnabled || NetworkDiscoveryService.IsAdministrator();
@@ -78,6 +86,9 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>O que a rede expõe: portas abertas pelo router, MAC do router e o que a internet vê.</summary>
     public ExposureViewModel Exposure { get; }
 
+    /// <summary>Dizer quais são os dispositivos: "é meu", "não reconheço", nome e nota.</summary>
+    public DeviceReviewViewModel Review { get; }
+
     /// <summary>Vista de Histórico.</summary>
     public HistoryViewModel History { get; }
 
@@ -93,6 +104,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (_started)
             return;
         _started = true;
+        if (DemoData.IsEnabled)
+            DemoData.SeedKnownDevices(_known); // estado inventado, já no idioma escolhido
         await ScanAsync();
     }
 
@@ -352,10 +365,50 @@ public sealed partial class MainViewModel : ObservableObject
             NotifySystem(F("event.deviceLeft", e.Watched.Name), F("notify.lastSeenAt", e.IpAddress));
         }
 
+        AnnounceReturned(update.Returned);
+
         var sourceProblem = result.Devices.SelectMany(d => d.Services)
             .Any(s => s.VulnerabilityCheck is VulnerabilityCheckStatus.SourceUnavailable or VulnerabilityCheckStatus.CheckedWithStaleData);
         if (sourceProblem)
             Toast(T("check.unavailable"), T("toast.nvd.hint"), ToastKind.Warning);
+    }
+
+    /// <summary>
+    /// Dispositivos que voltaram à rede e que o utilizador não conhece (por rever, depois de ter começado a
+    /// marcar os seus) ou que marcou como "não reconheço". Os dispositivos conhecidos nunca geram este aviso.
+    /// </summary>
+    internal void AnnounceReturned(IReadOnlyList<DeviceInfo> returned)
+    {
+        string Line(DeviceInfo d) => $"{FindItem(d)?.DisplayName ?? d.IpAddress} · {d.IpAddress}";
+
+        var suspicious = new List<DeviceInfo>();
+        var unknown = new List<DeviceInfo>();
+        foreach (var device in returned)
+        {
+            switch (_known.Attention(_tracker.Key(device)))
+            {
+                case DeviceAttention.Suspicious: suspicious.Add(device); break;
+                case DeviceAttention.Unknown: unknown.Add(device); break;
+            }
+        }
+
+        foreach (var device in suspicious)
+        {
+            Toast(T("review.suspicious.back"), Line(device), ToastKind.Danger);
+            NotifySystem(T("review.suspicious.back"), Line(device));
+        }
+
+        if (unknown.Count == 1)
+        {
+            Toast(T("review.unknown.back"), Line(unknown[0]), ToastKind.Warning);
+            NotifySystem(T("review.unknown.back"), Line(unknown[0]));
+        }
+        else if (unknown.Count > 1)
+        {
+            var title = F("review.unknown.back.many", unknown.Count);
+            Toast(title, "", ToastKind.Warning);
+            NotifySystem(title, string.Join("\n", unknown.Take(4).Select(Line)) + (unknown.Count > 4 ? "\n…" : ""));
+        }
     }
 
     /// <summary>Portas novas abertas pelo router e alerta do MAC do router.</summary>
@@ -464,6 +517,8 @@ public sealed partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     private DeviceItemViewModel? _selectedDevice;
 
+    partial void OnSelectedDeviceChanged(DeviceItemViewModel? value) => Review.Select(value);
+
     public bool HasSelection => SelectedDevice != null;
 
     [ObservableProperty] private int _onlineCount;
@@ -482,7 +537,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string DevicesSubtitle => !HasScanned
         ? T("devices.subtitle.searching")
-        : F("devices.subtitle.online", OnlineCount) + (OfflineCount > 0 && Settings.ShowOffline ? " · " + F("devices.subtitle.offline", OfflineCount) : "") + $" · {LastScanText.ToLower(Instance.Culture)}";
+        : F("devices.subtitle.online", OnlineCount) + (OfflineCount > 0 && Settings.ShowOffline ? " · " + F("devices.subtitle.offline", OfflineCount) : "") + $" · {LastScanText.ToLower(Instance.Culture)}"
+          + (Review.IsActive && Review.UnreviewedCount > 0 ? " · " + Plural("review.subtitle", Review.UnreviewedCount) : "");
 
     private void RebuildDevices()
     {
@@ -504,7 +560,8 @@ public sealed partial class MainViewModel : ObservableObject
                 items.Add(new DeviceItemViewModel(device, history, key,
                     isGateway: device.IpAddress == gateway, isOnline: true,
                     isWatched: _tracker.FindWatched(device) != null,
-                    isNew: _tracker.IsRecentlyNew(history, TimeSpan.FromHours(24))));
+                    isNew: _tracker.IsRecentlyNew(history, TimeSpan.FromHours(24)),
+                    label: _known.Find(key), attention: _known.Attention(key)));
             }
         }
 
@@ -519,7 +576,8 @@ public sealed partial class MainViewModel : ObservableObject
                 if (onlineKeys.Contains(_tracker.Key(device)))
                     continue;
                 items.Add(new DeviceItemViewModel(device, entry, _tracker.Key(device), isGateway: false, isOnline: false,
-                    isWatched: _tracker.FindWatched(device) != null));
+                    isWatched: _tracker.FindWatched(device) != null,
+                    label: _known.Find(_tracker.Key(device)), attention: _known.Attention(_tracker.Key(device))));
             }
         }
 
@@ -545,6 +603,8 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedDevice = selectedKey == null ? null : Devices.FirstOrDefault(d => d.Key == selectedKey);
         RebuildSecurity();
         RebuildHistory();
+        Review.Refresh(_allDevices, source != null,
+            [.. _tracker.History.Select(h => _tracker.Key(h.MacAddress, h.IpAddress))]);
 
         OnPropertyChanged(nameof(DevicesSubtitle));
         OnPropertyChanged(nameof(PageSubtitle));

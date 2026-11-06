@@ -120,6 +120,23 @@ public static class DemoData
         };
     }
 
+    /// <summary>
+    /// Estado inventado para a demonstração: quase todos os dispositivos conhecidos, um com nome e nota, um por rever
+    /// (o iPhone) e um marcado como "não reconheço" (a consola). Tudo fictício, na pasta temporária da demonstração.
+    /// </summary>
+    public static void SeedKnownDevices(Nodar.Core.Monitoring.KnownDevices store)
+    {
+        static string Key(string mac) => Nodar.Core.Monitoring.DeviceTracker.KeyFor(mac, null);
+
+        foreach (var mac in new[] { "D0:CF:0E:00:00:01", "3C:22:FB:10:4A:01", "DC:A6:32:7B:00:12", "00:11:32:AB:CD:EF", "F4:F5:D8:00:11:22", "64:EB:8C:33:44:55" })
+            store.SetTrust(Key(mac), DeviceTrust.Known);
+
+        store.SetDetails(Key("DC:A6:32:7B:00:12"), T("demo.review.homelab.name"), T("demo.review.homelab.note"));
+        store.SetTrust(Key("7C:BB:8A:99:00:11"), DeviceTrust.Suspicious);
+        store.SetDetails(Key("7C:BB:8A:99:00:11"), "", T("demo.review.ps5.note"));
+        // O iPhone (A4:83:E7:66:77:88) fica por rever.
+    }
+
     /// <summary>Endereço público fictício (intervalo reservado para documentação).</summary>
     private const string PublicIp = "203.0.113.7";
 

@@ -179,6 +179,7 @@ public sealed class DeviceTracker
             else if (entry.Status == Offline)
             {
                 entry.Events.Add(new DeviceHistoryEvent { EventType = DeviceHistoryEventType.Seen, Timestamp = now, Status = Online });
+                update.Returned.Add(device);
                 NotifyIfWatched(device, entering: true, update);
             }
 
@@ -335,6 +336,9 @@ public sealed class TrackerUpdate
 {
     /// <summary>Dispositivos que nunca tinham sido vistos.</summary>
     public List<DeviceInfo> NewDevices { get; } = [];
+
+    /// <summary>Dispositivos já conhecidos que estavam offline e voltaram à rede neste scan.</summary>
+    public List<DeviceInfo> Returned { get; } = [];
     public List<WatchedEvent> WatchedArrived { get; } = [];
     public List<WatchedEvent> WatchedLeft { get; } = [];
 }

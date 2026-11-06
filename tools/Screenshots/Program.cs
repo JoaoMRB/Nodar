@@ -79,7 +79,7 @@ vm.Notifications.Items.Clear();
 Save("dispositivos.png");
 
 // 2. Detalhes de um servidor com vulnerabilidades, com o painel deslocado até aos CVEs
-vm.SelectedDevice = vm.Devices.First(d => d.DisplayName == "homelab");
+vm.SelectedDevice = vm.Devices.First(d => d.IpAddress == "192.168.1.40");
 Pump(TimeSpan.FromMilliseconds(600));
 var detailsScroll = window.GetVisualDescendants().OfType<ScrollViewer>()
     .FirstOrDefault(s => s.FindAncestorOfType<Border>() is { } b && b.Classes.Contains("details"));
@@ -89,6 +89,16 @@ if (detailsScroll != null)
     detailsScroll.Offset = new Vector(0, 330);
 }
 Save("detalhes.png");
+
+// 2b. Revisão de um dispositivo: "é meu / não reconheço", nome e nota (dados inventados da demonstração)
+vm.SelectedDevice = vm.Devices.First(d => d.IpAddress == "192.168.1.95");
+Pump(TimeSpan.FromMilliseconds(600));
+if (detailsScroll != null)
+{
+    Pump(TimeSpan.FromMilliseconds(300));
+    detailsScroll.Offset = new Vector(0, 0);
+}
+Save("revisao.png");
 
 // 3. Segurança
 vm.SelectedDevice = null;

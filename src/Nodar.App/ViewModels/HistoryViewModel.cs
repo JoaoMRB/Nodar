@@ -6,7 +6,7 @@ using Nodar.Core.Monitoring;
 namespace Nodar.App.ViewModels;
 
 /// <summary>Vista de Histórico: todos os dispositivos já vistos e os últimos eventos (entradas e saídas).</summary>
-public sealed partial class HistoryViewModel(DeviceTracker tracker) : ObservableObject
+public sealed partial class HistoryViewModel(DeviceTracker tracker, KnownDevices? known = null) : ObservableObject
 {
     private const int MaxRecentEvents = 40;
 
@@ -30,7 +30,8 @@ public sealed partial class HistoryViewModel(DeviceTracker tracker) : Observable
             var key = tracker.Key(device);
             KnownDevices.Add(onlineKeys.TryGetValue(key, out var online)
                 ? online
-                : new DeviceItemViewModel(device, entry, key, false, entry.Status == DeviceTracker.Online, tracker.FindWatched(device) != null));
+                : new DeviceItemViewModel(device, entry, key, false, entry.Status == DeviceTracker.Online, tracker.FindWatched(device) != null,
+                    label: known?.Find(key), attention: known?.Attention(key) ?? DeviceAttention.None));
         }
 
         foreach (var e in tracker.History

@@ -8,10 +8,13 @@ namespace Nodar.App.ViewModels;
 
 public sealed partial class DeviceItemViewModel : ObservableObject
 {
-    public DeviceItemViewModel(DeviceInfo device, DeviceHistoryEntry? history, string key, bool isGateway, bool isOnline, bool isWatched, bool isNew = false)
+    public DeviceItemViewModel(DeviceInfo device, DeviceHistoryEntry? history, string key, bool isGateway, bool isOnline, bool isWatched,
+        bool isNew = false, DeviceLabel? label = null, DeviceAttention attention = DeviceAttention.None)
     {
         IsNew = isNew;
         Key = key;
+        Label = label;
+        Attention = attention;
         Device = device;
         History = history;
         IsGateway = isGateway;
@@ -42,7 +45,32 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     /// <summary>Identidade no histórico (ver <see cref="DeviceTracker.Key(DeviceInfo)"/>).</summary>
     public string Key { get; }
 
+    // ---------------------------------------------------------------- O que o utilizador decidiu
+    // (nome, nota e "é meu / não reconheço": dados pessoais, só neste PC; ver KnownDevices)
+
+    public DeviceLabel? Label { get; }
+
+    /// <summary>Atenção que o dispositivo merece neste momento (suspeito, ou por rever depois de começar a marcar).</summary>
+    public DeviceAttention Attention { get; }
+
+    public DeviceTrust Trust => Label?.Trust ?? DeviceTrust.Unreviewed;
+    public string CustomName => Label?.Name ?? "";
+    public string Note => Label?.Note ?? "";
+
+    /// <summary>"Por rever" ou "Não reconheço" (um dispositivo conhecido não leva etiqueta: seria ruído em cada linha).</summary>
+    public string TrustBadge => Attention switch
+    {
+        DeviceAttention.Suspicious => T("trust.suspicious"),
+        DeviceAttention.Unknown => T("trust.unreviewed"),
+        _ => ""
+    };
+
+    public bool HasTrustBadge => Attention != DeviceAttention.None;
+    public IBrush TrustBadgeBrush => Visuals.SeverityBrush(Attention == DeviceAttention.Suspicious ? "Critical" : "Medium");
+    public IBrush TrustBadgeSoftBrush => Visuals.SeveritySoftBrush(Attention == DeviceAttention.Suspicious ? "Critical" : "Medium");
+
     public string DisplayName =>
+        !string.IsNullOrWhiteSpace(CustomName) ? CustomName :
         !string.IsNullOrWhiteSpace(Device.FriendlyName) ? Device.FriendlyName :
         IsGateway && string.IsNullOrWhiteSpace(Device.Hostname) ? T("net.router") :
         !string.IsNullOrWhiteSpace(Device.Hostname) ? TrimDomain(Device.Hostname) :
@@ -107,7 +135,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
 
     public bool Matches(string filter) =>
         string.IsNullOrWhiteSpace(filter) ||
-        new[] { DisplayName, Device.IpAddress, Device.MacAddress, Device.Vendor, Device.Hostname, TypeLabel, Device.OperatingSystem, Device.Model, Device.FriendlyName }
+        new[] { DisplayName, Device.IpAddress, Device.MacAddress, Device.Vendor, Device.Hostname, TypeLabel, Device.OperatingSystem, Device.Model, Device.FriendlyName, Note }
             .Any(s => s?.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase) == true);
 
     private static string TrimDomain(string host)
