@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Nodar.Core.Models;
 
@@ -22,7 +21,6 @@ public sealed class DeviceTracker
     public const string Online = "Online";
     public const string Offline = "Offline";
 
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static readonly Regex MacRegex = new("^([0-9A-F]{2}:){5}[0-9A-F]{2}$", RegexOptions.Compiled);
 
     private readonly string _historyPath;
@@ -106,7 +104,7 @@ public sealed class DeviceTracker
         _watchlist.Clear();
         _sharedMacs.Clear();
 
-        var entries = ReadJson<List<DeviceHistoryEntry>>(_historyPath) ?? [];
+        var entries = JsonStore.Read<List<DeviceHistoryEntry>>(_historyPath) ?? [];
         foreach (var entry in entries.Where(e => e.SharedMac))
             _sharedMacs.Add(KeyFor(entry.MacAddress, entry.IpAddress));
 
@@ -137,13 +135,13 @@ public sealed class DeviceTracker
             }
         }
 
-        _watchlist.AddRange(ReadJson<List<WatchedDevice>>(_watchlistPath) ?? []);
+        _watchlist.AddRange(JsonStore.Read<List<WatchedDevice>>(_watchlistPath) ?? []);
     }
 
     public void Save()
     {
-        WriteJson(_historyPath, _history.Values.OrderBy(e => e.IpAddress, StringComparer.OrdinalIgnoreCase).ToList());
-        WriteJson(_watchlistPath, _watchlist);
+        JsonStore.Write(_historyPath, _history.Values.OrderBy(e => e.IpAddress, StringComparer.OrdinalIgnoreCase).ToList());
+        JsonStore.Write(_watchlistPath, _watchlist);
     }
 
     // ---------------------------------------------------------------- scans
@@ -329,39 +327,6 @@ public sealed class DeviceTracker
         }
     }
 
-    private static T? ReadJson<T>(string path)
-    {
-        try
-        {
-            return File.Exists(path) ? JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) : default;
-        }
-        catch (JsonException ex)
-        {
-            // Ficheiro corrompido: começa vazio em vez de impedir o arranque, mas guarda uma cópia, porque a
-            // próxima gravação apagaria o histórico.
-            NodarLog.CorruptFile(path, ex);
-            return default;
-        }
-        catch (Exception ex) when (NodarLog.Swallow(ex, $"Ler {Path.GetFileName(path)}"))
-        {
-            return default; // ficheiro bloqueado ou sem permissões
-        }
-    }
-
-    private static void WriteJson<T>(string path, T value)
-    {
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var temp = path + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(value, JsonOptions));
-            File.Move(temp, path, overwrite: true);
-        }
-        catch (Exception ex) when (NodarLog.Swallow(ex, $"Gravar {Path.GetFileName(path)}"))
-        {
-            // Falhar a gravação não deve interromper o scan.
-        }
-    }
 }
 
 public sealed record WatchedEvent(WatchedDevice Watched, string DeviceName, string IpAddress);

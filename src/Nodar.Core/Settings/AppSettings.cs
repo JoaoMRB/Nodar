@@ -14,6 +14,8 @@ public sealed class AppSettings
     public bool OsDetection { get; set; }
     public bool ServiceDetection { get; set; } = true;
     public bool VulnerabilityScan { get; set; } = true;
+    /// <summary>Perguntar ao router (UPnP) que portas abriu para a internet.</summary>
+    public bool UpnpCheck { get; set; } = true;
     public bool AutoRefresh { get; set; } = true;
     public int RefreshIntervalSeconds { get; set; } = 120;
     public bool ShowOffline { get; set; } = true;

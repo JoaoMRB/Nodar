@@ -34,7 +34,8 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(IPlatformServices platform)
     {
         _platform = platform;
-        _tracker = new DeviceTracker(DemoData.IsEnabled ? DemoData.DataDirectory : DeviceTracker.DefaultDataDirectory);
+        var dataDirectory = DemoData.IsEnabled ? DemoData.DataDirectory : DeviceTracker.DefaultDataDirectory;
+        _tracker = new DeviceTracker(dataDirectory);
         _tracker.Load();
 
         // As preferências são carregadas (e o idioma aplicado) antes de ouvir mudanças de idioma.
@@ -46,6 +47,12 @@ public sealed partial class MainViewModel : ObservableObject
         Instance.LanguageChanged += OnLanguageChanged;
 
         Security = new SecurityViewModel();
+        var gatewayGuard = new GatewayGuard(dataDirectory);
+        gatewayGuard.Load();
+        var portMappings = new PortMappingTracker(dataDirectory);
+        portMappings.Load();
+        Exposure = new ExposureViewModel(gatewayGuard, portMappings, DemoData.IsEnabled ? DemoData.LookupInternetAsync : null);
+        Exposure.GatewayTrusted += () => Toast(T("toast.gateway.trusted"), T("toast.gateway.trusted.hint"), ToastKind.Success);
         History = new HistoryViewModel(_tracker);
         Watchlist = new WatchlistViewModel(_tracker);
 
@@ -67,6 +74,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>Vista de Segurança.</summary>
     public SecurityViewModel Security { get; }
+
+    /// <summary>O que a rede expõe: portas abertas pelo router, MAC do router e o que a internet vê.</summary>
+    public ExposureViewModel Exposure { get; }
 
     /// <summary>Vista de Histórico.</summary>
     public HistoryViewModel History { get; }
@@ -259,6 +269,7 @@ public sealed partial class MainViewModel : ObservableObject
                 OSDetection = Settings.OsDetection,
                 ServiceDetection = Settings.ServiceDetection,
                 VulnerabilityScan = Settings.VulnerabilityScan,
+                UpnpCheck = Settings.UpnpCheck,
                 Progress = progress,
                 DevicesDiscovered = discovered,
                 CancellationToken = _scanCts.Token
@@ -280,9 +291,11 @@ public sealed partial class MainViewModel : ObservableObject
                 LoadNetworkInfo();
 
             var update = _tracker.ApplyScan(result.Devices);
+            var exposure = Exposure.ApplyScan(result);
             RebuildDevices();
             RebuildWatchlist();
             AnnounceChanges(update, result);
+            AnnounceExposure(exposure);
         }
         catch (OperationCanceledException)
         {
@@ -343,6 +356,46 @@ public sealed partial class MainViewModel : ObservableObject
             .Any(s => s.VulnerabilityCheck is VulnerabilityCheckStatus.SourceUnavailable or VulnerabilityCheckStatus.CheckedWithStaleData);
         if (sourceProblem)
             Toast(T("check.unavailable"), T("toast.nvd.hint"), ToastKind.Warning);
+    }
+
+    /// <summary>Portas novas abertas pelo router e alerta do MAC do router.</summary>
+    private void AnnounceExposure(ExposureChanges changes)
+    {
+        string Describe(PortMapping m)
+        {
+            var item = _allDevices.FirstOrDefault(d => d.IsOnline && d.IpAddress == m.InternalClient);
+            var target = item != null && item.DisplayName != m.InternalClient ? $"{item.DisplayName} · {m.InternalClient}" : m.InternalClient;
+            return $"{m.Protocol} {m.ExternalPort} → {target}";
+        }
+
+        var ports = changes.NewMappings;
+        foreach (var mapping in ports.Take(3))
+            Toast(T("notify.portOpened"), Describe(mapping),
+                ExposureAdvice.SensitiveService(mapping.InternalPort) != null ? ToastKind.Danger : ToastKind.Warning);
+        if (ports.Count > 3)
+            Toast(F("notify.morePorts", ports.Count - 3), "", ToastKind.Warning);
+        // No Windows, só o que interessa (portas temporárias de jogos e chamadas ficam só dentro da app).
+        var worth = ports.Where(ExposureAdvice.WorthSystemNotice).ToList();
+        if (worth.Count == 1)
+            NotifySystem(T("notify.portOpened"), Describe(worth[0]));
+        else if (worth.Count > 1)
+            NotifySystem(F("notify.portsOpened", worth.Count),
+                string.Join("\n", worth.Take(4).Select(Describe)) + (worth.Count > 4 ? "\n…" : ""));
+
+        if (changes.NewGatewayAlert is not { } alert)
+            return;
+        if (alert.IsStrong)
+        {
+            // O sinal forte justifica incomodar mesmo com a janela fechada; a mudança simples só fica na app
+            // (acontece sempre que se muda de rede com o mesmo endereço de router).
+            var message = F("notify.gateway.strong", alert.GatewayIp, alert.OtherDeviceIp);
+            Toast(T("gateway.strong.title"), message, ToastKind.Danger);
+            NotifySystem(T("gateway.strong.title"), message);
+        }
+        else
+        {
+            Toast(T("gateway.weak.title"), F("notify.gateway.weak", alert.GatewayIp), ToastKind.Warning);
+        }
     }
 
     // ================================================================ Dispositivos
@@ -551,6 +604,7 @@ public sealed partial class MainViewModel : ObservableObject
         _lastResult = result;
         _lastScanAt = DateTime.Now;
         _tracker.ApplyScan(result.Devices);
+        Exposure.ApplyScan(result);
         RebuildDevices();
         RebuildWatchlist();
     }
@@ -591,7 +645,11 @@ public sealed partial class MainViewModel : ObservableObject
 
     // ================================================================ Segurança, histórico e monitorizados
 
-    private void RebuildSecurity() => Security.Update(_lastResult, _allDevices, VulnerableDeviceCount);
+    private void RebuildSecurity()
+    {
+        Security.Update(_lastResult, _allDevices, VulnerableDeviceCount);
+        Exposure.Update(_allDevices);
+    }
 
     private void RebuildHistory() => History.Update(_allDevices);
 

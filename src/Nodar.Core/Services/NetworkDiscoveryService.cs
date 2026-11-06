@@ -129,6 +129,11 @@ public static class NetworkDiscoveryService
         var (mdns, ssdp, netbios) = (mdnsTask.Result, ssdpTask.Result, netbiosTask.Result);
         Clues CluesFor(string ip) => new(mdns.GetValueOrDefault(ip), ssdp.GetValueOrDefault(ip), netbios.GetValueOrDefault(ip));
 
+        // UPnP: pergunta ao router que portas abriu para a internet. Corre enquanto os dispositivos são analisados.
+        var upnpTask = options.UpnpCheck
+            ? UpnpGatewayClient.ReadAsync(network.Gateway, ssdp.GetValueOrDefault(network.Gateway)?.Location, options.CancellationToken)
+            : null;
+
         // Lista preliminar logo após a descoberta (a interface mostra-a enquanto os detalhes chegam).
         options.DevicesDiscovered?.Report(discovered
             .Select(d => BasicDevice(d.Key, d.Value, "", network, CluesFor(d.Key)))
@@ -159,6 +164,7 @@ public static class NetworkDiscoveryService
                 });
             });
         var devices = analyzed.ToList();
+        var upnp = upnpTask == null ? null : await upnpTask;
 
         // Entradas que vinham só da cache ARP e que o sistema entretanto deu como inalcançáveis: já saíram.
         var gone = NeighborDiscovery.GoneSince(neighbors.Unconfirmed);
@@ -184,7 +190,8 @@ public static class NetworkDiscoveryService
                 .ToList(),
             ScanMethod = method,
             Duration = stopwatch.Elapsed,
-            VulnerabilitySourceNote = vulnerabilityService?.BuildSourceNote()
+            VulnerabilitySourceNote = vulnerabilityService?.BuildSourceNote(),
+            Upnp = upnp
         };
     }
 

@@ -125,9 +125,14 @@
               <Grid ColumnDefinitions="16,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Shield}" />
                 <TextBlock Grid.Column="1" Text="{l:T nav.security}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
-                <Border Grid.Column="2" Classes="chip" Padding="7,1" Background="#26FF4D6D" IsVisible="{Binding Security.HasVulnerabilityData}">
-                  <TextBlock Text="{Binding VulnerabilityCount}" Foreground="{StaticResource CriticalBrush}" />
-                </Border>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                  <Border Classes="chip" Padding="7,1" Background="#26FBBF24" IsVisible="{Binding Exposure.NeedsAttention}">
+                    <Path Classes="icon sm" Data="{StaticResource Icon.Alert}" Stroke="{StaticResource WarningBrush}" />
+                  </Border>
+                  <Border Classes="chip" Padding="7,1" Background="#26FF4D6D" IsVisible="{Binding Security.HasVulnerabilityData}">
+                    <TextBlock Text="{Binding VulnerabilityCount}" Foreground="{StaticResource CriticalBrush}" />
+                  </Border>
+                </StackPanel>
               </Grid>
             </Button>
 
@@ -205,6 +210,11 @@
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.os}" />
                         <TextBlock Classes="caption" Text="{l:T options.os.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.OsDetection}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.upnp}" />
+                        <TextBlock Classes="caption" Text="{l:T options.upnp.hint}" TextWrapping="Wrap" /></StackPanel>
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.UpnpCheck}" />
                     </Grid>
 
                     <Border Classes="divider" />
@@ -626,6 +636,125 @@
           <!-- ============ Segurança -->
           <ScrollViewer IsVisible="{Binding IsSecurityPage}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="18" Margin="32,0,28,24">
+
+              <!-- O MAC do router mudou -->
+              <Border Classes="card" Padding="0" ClipToBounds="True" IsVisible="{Binding Exposure.HasGatewayAlert}">
+                <Grid ColumnDefinitions="3,*,Auto">
+                  <Border Background="{Binding Exposure.GatewayAlertBrush}" />
+                  <StackPanel Grid.Column="1" Margin="18,14" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Path Classes="icon" Data="{StaticResource Icon.Alert}" Stroke="{Binding Exposure.GatewayAlertBrush}" />
+                      <TextBlock Classes="h3" Text="{Binding Exposure.GatewayAlertTitle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Classes="caption" Text="{Binding Exposure.GatewayAlertText}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Button Grid.Column="2" Classes="ghost" Margin="0,14,18,14" VerticalAlignment="Top"
+                          Command="{Binding Exposure.TrustGatewayCommand}">
+                    <TextBlock Text="{l:T gateway.trust}" />
+                  </Button>
+                </Grid>
+              </Border>
+
+              <!-- Portas que o router abriu para a internet (UPnP) -->
+              <StackPanel Spacing="10" IsVisible="{Binding Exposure.ShowUpnp}">
+                <TextBlock Classes="overline" Text="{l:T upnp.title}" />
+                <Border Classes="card" Padding="16,14">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <Border Width="38" Height="38" CornerRadius="11" VerticalAlignment="Top" Background="{Binding Exposure.UpnpSoftBrush}">
+                      <Path Classes="icon" Data="{StaticResource Icon.Plug}" Stroke="{Binding Exposure.UpnpBrush}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="4">
+                      <TextBlock Classes="h3" Text="{Binding Exposure.UpnpHeadline}" TextWrapping="Wrap" />
+                      <TextBlock Classes="caption" Text="{Binding Exposure.UpnpDetail}" TextWrapping="Wrap" />
+                      <TextBlock Classes="caption tertiary" Text="{Binding Exposure.UpnpExternal}" IsVisible="{Binding Exposure.HasUpnpExternal}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Exposure.PortMappings}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PortMappingItemViewModel">
+                      <Border Classes="card" Padding="0" Margin="0,0,0,8" ClipToBounds="True">
+                        <Grid ColumnDefinitions="3,*,Auto">
+                          <Border Background="{Binding Brush}" />
+                          <StackPanel Grid.Column="1" Margin="18,12" Spacing="5">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                              <TextBlock Classes="mono" Text="{Binding External}" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                              <TextBlock Classes="caption" Text="{Binding Purpose}" IsVisible="{Binding HasPurpose}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Classes="caption" Text="{Binding Target}" TextWrapping="Wrap" />
+                            <TextBlock Classes="caption tertiary" Text="{Binding Since}" FontSize="11.5" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="2" Margin="0,12,18,12" Spacing="4" HorizontalAlignment="Right">
+                            <Border Classes="chip" Background="{Binding SoftBrush}" HorizontalAlignment="Right" IsVisible="{Binding IsSensitive}">
+                              <TextBlock Text="{Binding RiskText}" Foreground="{Binding Brush}" />
+                            </Border>
+                            <TextBlock Classes="caption tertiary" Text="{Binding Scope}" HorizontalAlignment="Right" FontSize="11.5" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <!-- O que a internet vê do endereço público (Shodan), só a pedido -->
+              <StackPanel Spacing="10">
+                <TextBlock Classes="overline" Text="{l:T internet.title}" />
+                <Border Classes="card" Padding="16,14">
+                  <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <Border Width="38" Height="38" CornerRadius="11" VerticalAlignment="Top" Background="{Binding Exposure.InternetSoftBrush}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Globe}" Stroke="{Binding Exposure.InternetBrush}" />
+                      </Border>
+                      <StackPanel Grid.Column="1" Margin="14,0" Spacing="4">
+                        <TextBlock Classes="caption" Text="{l:T internet.intro}" TextWrapping="Wrap" IsVisible="{Binding !Exposure.HasInternetResult}" />
+                        <TextBlock Classes="h3" Text="{Binding Exposure.InternetHeadline}" TextWrapping="Wrap" IsVisible="{Binding Exposure.HasInternetResult}" />
+                        <TextBlock Classes="caption" Text="{Binding Exposure.InternetDetail}" TextWrapping="Wrap" IsVisible="{Binding Exposure.HasInternetResult}" />
+                        <TextBlock Classes="caption tertiary" Text="{l:T internet.privacy}" TextWrapping="Wrap" FontSize="11.5" />
+                        <TextBlock Classes="caption tertiary" Text="{Binding Exposure.InternetChecked}" FontSize="11.5" IsVisible="{Binding Exposure.HasInternetResult}" />
+                      </StackPanel>
+                      <Button Grid.Column="2" Classes="primary" VerticalAlignment="Top" MinWidth="128"
+                              Command="{Binding Exposure.CheckInternetCommand}">
+                        <TextBlock Text="{Binding Exposure.InternetButtonText}" HorizontalAlignment="Center" />
+                      </Button>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Exposure.InternetPorts}" IsVisible="{Binding Exposure.HasInternetPorts}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:InternetPortItemViewModel">
+                          <Border Classes="chip" Background="{Binding SoftBrush}" Margin="0,0,8,8" Padding="10,6">
+                            <StackPanel Spacing="1">
+                              <TextBlock Text="{Binding Name}" Foreground="{Binding Brush}" FontWeight="SemiBold" />
+                              <TextBlock Classes="caption tertiary" Text="{Binding Origin}" FontSize="10.5" />
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Exposure.InternetVulns}" IsVisible="{Binding Exposure.HasInternetVulns}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CveLinkItemViewModel">
+                          <Button Classes="link" Margin="0,0,14,4"
+                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenUrlCommand}" CommandParameter="{Binding Url}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <TextBlock Classes="mono" Text="{Binding Cve}" FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                              <Path Classes="icon sm" Data="{StaticResource Icon.External}" Stroke="{StaticResource TextTertiaryBrush}" MaxWidth="11" MaxHeight="11" />
+                            </StackPanel>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
               <UniformGrid Columns="4" Margin="-6,0,-6,0" IsVisible="{Binding Security.IsChecked}">
                 <Border Classes="card" Margin="6" Padding="16,14">
                   <StackPanel Spacing="6"><TextBlock Classes="caption" Text="{l:T security.critical}" />

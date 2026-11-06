@@ -93,6 +93,9 @@ Save("detalhes.png");
 // 3. Segurança
 vm.SelectedDevice = null;
 vm.NavigateCommand.Execute(Page.Security);
+// "O que a internet vê" só corre a pedido: em demonstração a resposta é inventada, nada sai do computador.
+vm.Exposure.CheckInternetCommand.Execute(null);
+WaitFor(() => vm.Exposure.HasInternetResult, TimeSpan.FromSeconds(5));
 Save("seguranca.png");
 
 // (Histórico fica de fora: em demonstração todos os eventos são do mesmo minuto.)

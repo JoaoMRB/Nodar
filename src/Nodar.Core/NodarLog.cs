@@ -36,6 +36,7 @@ public static class NodarLog
         AuthenticationException => true,                               // TLS recusado ou com certificado estranho
         UnauthorizedAccessException or SecurityException or Win32Exception => true,
         JsonException => true,                                         // ficheiro de dados corrompido
+        System.Xml.XmlException => true,                               // XML mal formado vindo da rede (router, descritor UPnP)
         AggregateException aggregate => aggregate.InnerExceptions.All(IsExpected),
         _ => false
     };

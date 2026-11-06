@@ -43,6 +43,9 @@ public static class ServiceDetectionService
         [49152] = "UPnP"
     };
 
+    /// <summary>Nome do serviço habitual numa porta (<c>null</c> se não for uma das conhecidas).</summary>
+    public static string? WellKnownName(int port) => CommonServices.GetValueOrDefault(port);
+
     public static async Task<List<Models.ServiceInfo>> DetectServicesAsync(string ip, List<int> openPorts, CancellationToken ct = default)
     {
         var services = new List<Models.ServiceInfo>();

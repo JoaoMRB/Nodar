@@ -115,6 +115,9 @@ public sealed class ScanResult
 
     /// <summary>Resumo de como foi feita a verificação de vulnerabilidades (fonte, cache, falhas).</summary>
     public string? VulnerabilitySourceNote { get; init; }
+
+    /// <summary>Portas que o router abriu para a internet (<c>null</c> se a leitura UPnP estava desligada).</summary>
+    public UpnpReport? Upnp { get; init; }
     public string? Error { get; init; }
 }
 
@@ -126,6 +129,9 @@ public sealed class ScanOptions
     public bool ServiceDetection { get; init; }
     public bool VulnerabilityScan { get; init; }
     public bool AdvancedPortScan { get; init; }
+
+    /// <summary>Perguntar ao router (UPnP) que portas abriu para a internet.</summary>
+    public bool UpnpCheck { get; init; }
     public IProgress<ScanProgress>? Progress { get; init; }
 
     /// <summary>Lista preliminar (IP, MAC, fabricante), reportada logo após a descoberta ARP.</summary>

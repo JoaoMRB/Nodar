@@ -34,6 +34,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         OsDetection = settings.OsDetection;
         ServiceDetection = settings.ServiceDetection;
         VulnerabilityScan = settings.VulnerabilityScan;
+        UpnpCheck = settings.UpnpCheck;
         AutoRefresh = settings.AutoRefresh;
         ShowOffline = settings.ShowOffline;
         WindowsNotifications = settings.WindowsNotifications;
@@ -52,6 +53,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _osDetection;
     [ObservableProperty] private bool _serviceDetection;
     [ObservableProperty] private bool _vulnerabilityScan;
+    [ObservableProperty] private bool _upnpCheck;
 
     // Dependências: vulnerabilidades ⇒ serviços ⇒ portas.
     partial void OnVulnerabilityScanChanged(bool value)
@@ -75,6 +77,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     partial void OnDeepScanChanged(bool value) => Save();
     partial void OnOsDetectionChanged(bool value) => Save();
+    partial void OnUpnpCheckChanged(bool value) => Save();
 
     public string ScanModeSummary
     {
@@ -192,6 +195,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings.OsDetection = OsDetection;
         _settings.ServiceDetection = ServiceDetection;
         _settings.VulnerabilityScan = VulnerabilityScan;
+        _settings.UpnpCheck = UpnpCheck;
         _settings.AutoRefresh = AutoRefresh;
         _settings.ShowOffline = ShowOffline;
         _settings.RefreshIntervalSeconds = SelectedInterval?.Seconds ?? 120;

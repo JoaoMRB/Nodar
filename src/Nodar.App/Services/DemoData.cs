@@ -87,7 +87,38 @@ public static class DemoData
             Network = Network,
             Devices = devices,
             ScanMethod = T("demo.badge"),
-            VulnerabilitySourceNote = vulnerabilityService.BuildSourceNote()
+            VulnerabilitySourceNote = vulnerabilityService.BuildSourceNote(),
+            Upnp = new UpnpReport
+            {
+                Status = UpnpStatus.Ok,
+                ExternalIp = PublicIp,
+                Mappings =
+                [
+                    new PortMapping { Protocol = "TCP", ExternalPort = 22, InternalClient = "192.168.1.40", InternalPort = 22, Description = "SSH" },
+                    new PortMapping { Protocol = "TCP", ExternalPort = 32400, InternalClient = "192.168.1.52", InternalPort = 32400, Description = "Plex Media Server" },
+                    new PortMapping { Protocol = "UDP", ExternalPort = 3074, InternalClient = "192.168.1.95", InternalPort = 3074, Description = "PlayStation Network" }
+                ]
+            }
+        };
+    }
+
+    /// <summary>Endereço público fictício (intervalo reservado para documentação).</summary>
+    private const string PublicIp = "203.0.113.7";
+
+    /// <summary>
+    /// "O que a internet vê" em demonstração: uma resposta inventada, para a demonstração nunca enviar nada
+    /// para fora do computador. As portas incluem uma que o router não abriu por UPnP (7547, gestão do operador).
+    /// </summary>
+    public static async Task<InternetExposure> LookupInternetAsync(string? ip, CancellationToken ct)
+    {
+        await Task.Delay(500, ct);
+        return new InternetExposure
+        {
+            Status = InternetCheckStatus.Ok,
+            Ip = PublicIp,
+            Ports = [22, 7547, 32400],
+            Vulns = ["CVE-2016-6210", "CVE-2018-15473"],
+            CheckedAt = DateTime.Now
         };
     }
 }
