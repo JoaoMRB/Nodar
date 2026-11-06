@@ -52,10 +52,13 @@ A Windows app built with C# / .NET 9 and an [Avalonia](https://avaloniaui.net/) 
 - **Service detection** from banners, including HTTPS (TLS) and the DNS server version (`version.bind`). Probes never send credentials or login attempts.
 - **Operating system detection** from the TCP/IP fingerprint (TTL, window size, MSS, DF flag), with a confidence level.
 - **Known vulnerability checks** with official data from the [NVD](https://nvd.nist.gov/) (NIST) and the [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) catalog. See [How vulnerability checking works](#how-vulnerability-checking-works).
+- **Ports opened by the router (UPnP)**: asks the router, with anonymous read-only queries, which ports it opened to the internet, for which device and since when. It highlights exposed remote access, file sharing, databases and cameras, and warns when a new port appears (the temporary ones from games and calls only warn inside the app). It can be turned off in the Options.
+- **What the internet sees**: on request (a button on the *Security* page), it queries the [Shodan InternetDB](https://internetdb.shodan.io/) to show the open ports and CVEs the internet links to your public address, and which of those ports the router opened through UPnP. It never runs by itself. See [Privacy and network](#privacy-and-network).
 
 ### Monitoring
 - **Persistent history** of every device: when it was first seen and when it joined and left. Devices are identified by MAC, so a new DHCP address doesn't create a "new" device.
 - **New devices**: a notice when a device that has never been seen before appears. The first scan is the baseline.
+- **Router MAC**: remembers the MAC the router answers with and warns if it changes. On its own, a change is a weak signal (you replaced the router, or you're on another network with the same address, and you can accept the MAC). If another device on the network has exactly that MAC, the alert is strong: the typical trace of ARP spoofing, someone impersonating the router.
 - **Watched devices**: tap a device's star and get notified when it joins or leaves. To avoid false alarms from sleeping phones, a device only counts as gone after missing two scans in a row.
 - **Auto refresh** with a configurable interval (1 to 15 minutes).
 - **Windows notifications** (Action Center) when the window isn't visible: new devices (several are grouped into one notification), and watched devices joining or leaving. Clicking the notification opens Nodar.
@@ -141,6 +144,8 @@ Each service shows its check status: *checked*, *checked with cached data*, *ver
 - Only the **product identifier** is sent to the NVD (e.g. `cpe:2.3:a:openbsd:openssh`). **No IPs, MACs, hostnames or detected versions are sent.** Version matching happens on your PC.
 - The KEV catalog is downloaded in full, with none of your data.
 - To identify manufacturers, Nodar downloads the public IEEE registry (`standards-oui.ieee.org`) once a month. None of your data is sent.
+- Reading the router's UPnP (open ports and external address) is an anonymous, read-only query to the router itself, on the local network: only the router's IP is contacted, nothing is ever changed and there are no credentials. It can be turned off in the Options.
+- **"What the internet sees"** only runs when you press the button, and it's the only feature that sends something off your PC: your **public address**, to the Shodan InternetDB (free, no account). The address comes from the router itself; if it doesn't say, `api.ipify.org` is asked as well. If the router's address isn't public (CGNAT or double NAT), nothing is looked up. Shodan's data is from its last visit to your address and may be days old.
 - ARP, Bonjour/mDNS, SSDP and NetBIOS queries stay on your local network. The UPnP descriptor is only read from the device that announced it, over HTTP on the local network, with size and time limits and without DTD processing (XXE protection).
 - Data is cached in `%LOCALAPPDATA%\Nodar\cache\`: NVD data for 3 days, KEV for 1. Without internet, the existing cache is used and the app tells you.
 
@@ -160,6 +165,7 @@ src/Nodar.App/                       # Interface (Avalonia, MVVM)
 │   ├── MainViewModel.cs             # Scan, device list, filters and navigation
 │   ├── SettingsViewModel.cs         # Preferences (scan options, background, language)
 │   ├── Security/History/WatchlistViewModel.cs  # Security, History and Watchlist views
+│   ├── ExposureViewModel.cs         # Ports opened by the router, router MAC, what the internet sees
 │   └── ToastHost.cs                 # In-app notices
 ├── Localization/TExtension.cs       # {l:T key} markup extension for translated text
 ├── Styles/                          # Theme (colors, shadows), control styles and icons
@@ -169,12 +175,17 @@ src/Nodar.Core/                      # Logic, no UI
 ├── Models/NetworkModels.cs          # Models (device, network, history, scan)
 ├── Localization/                    # Translations: pt.json, en.json (same keys, enforced by tests)
 ├── Monitoring/DeviceTracker.cs      # History, new and watched devices
+├── Monitoring/GatewayGuard.cs       # Router MAC: detects changes and ARP spoofing
+├── Monitoring/PortMappingTracker.cs # Ports opened by the router: what's new and since when
 ├── Settings/AppSettings.cs          # Preferences
 └── Services/
     ├── NetworkDiscoveryService.cs   # Scan orchestration (parallel)
     ├── NeighborDiscovery.cs         # ARP discovery (Windows neighbor table)
     ├── MdnsProbe.cs                 # Bonjour/mDNS: name and model
     ├── SsdpProbe.cs                 # SSDP/UPnP: name, manufacturer, model, UPnP stack
+    ├── UpnpGatewayClient.cs         # Ports the router opened (UPnP IGD, read-only)
+    ├── InternetExposureService.cs   # What the internet sees of the public address (Shodan InternetDB)
+    ├── ExposureAdvice.cs            # Sensitive services and when a port deserves a notification
     ├── NetBiosProbe.cs              # NetBIOS name (Windows PCs, NAS)
     ├── DeviceIdentification.cs      # Model → family and type (Mac14,7 → Mac)
     ├── OuiRegistry.cs               # IEEE manufacturer registry
@@ -205,7 +216,7 @@ docs/screenshots/                    # README screenshots (Portuguese; English i
 archive/python-web/                  # Original Python web prototype (no longer maintained)
 ```
 
-Local data (history, watchlist, preferences and vulnerability cache) lives in `%LOCALAPPDATA%\Nodar\`.
+Local data (history, watchlist, router MAC, known open ports, preferences and vulnerability cache) lives in `%LOCALAPPDATA%\Nodar\`.
 
 ---
 
@@ -230,13 +241,14 @@ Local data (history, watchlist, preferences and vulnerability cache) lives in `%
 - [ ] Wire the advanced scanner, traceroute and timing profiles into the interface
 - [x] Modern interface (Avalonia) with logic split into `Nodar.Core`
 - [x] Windows notifications and background monitoring (system tray)
+- [x] Ports opened by the router (UPnP), router MAC alert and "what the internet sees" (Shodan)
 - [ ] Custom names and "trusted devices"
 - [x] Identification via Bonjour/mDNS and the IEEE manufacturer registry
 - [x] Identification via SSDP/UPnP and NetBIOS
 - [x] App icon
 - [x] README screenshots
 - [x] Interface, notifications and reports in English and Portuguese
-- [ ] More interface tests (headless language-switch tests exist; Core has 225)
+- [ ] More interface tests (headless language-switch tests exist; Core has nearly 300)
 
 ---
 
