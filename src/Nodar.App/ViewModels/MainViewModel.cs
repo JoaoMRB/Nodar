@@ -14,10 +14,14 @@ namespace Nodar.App.ViewModels;
 
 public enum Page { Devices, Security, History, Watchlist }
 
+/// <summary>
+/// Coordena a janela principal: scan, lista de dispositivos, filtros e navegação. As preferências, os avisos e as
+/// vistas de Segurança, Histórico e Monitorizados vivem em view-models próprios (<see cref="Settings"/>,
+/// <see cref="Notifications"/>, <see cref="Security"/>, <see cref="History"/>, <see cref="Watchlist"/>).
+/// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly IPlatformServices _platform;
-    private readonly AppSettings _settings;
     private readonly DeviceTracker _tracker;
     private readonly DispatcherTimer _refreshTimer = new();
     private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(30) };
@@ -26,31 +30,24 @@ public sealed partial class MainViewModel : ObservableObject
     private DateTime? _lastScanAt;
     private List<DeviceItemViewModel> _allDevices = [];
     private IReadOnlyList<DeviceInfo>? _preliminary;
-    private bool _loadingSettings;
 
     public MainViewModel(IPlatformServices platform)
     {
         _platform = platform;
-        _settings = AppSettings.Load();
         _tracker = new DeviceTracker(DemoData.IsEnabled ? DemoData.DataDirectory : DeviceTracker.DefaultDataDirectory);
         _tracker.Load();
 
-        _loadingSettings = true;
-        DeepScan = _settings.DeepScan;
-        PortScan = _settings.PortScan;
-        OsDetection = _settings.OsDetection;
-        ServiceDetection = _settings.ServiceDetection;
-        VulnerabilityScan = _settings.VulnerabilityScan;
-        AutoRefresh = _settings.AutoRefresh;
-        ShowOffline = _settings.ShowOffline;
-        WindowsNotifications = _settings.WindowsNotifications;
-        CloseToTray = _settings.CloseToTray;
-        StartWithWindows = _settings.StartWithWindows;
-        SelectedLanguage = LanguageOptions.FirstOrDefault(o => o.Code == _settings.Language) ?? LanguageOptions[0];
-        StartupRegistration.Refresh(_settings.StartWithWindows);
-        SelectedInterval = IntervalOptions.FirstOrDefault(o => o.Seconds == _settings.RefreshIntervalSeconds) ?? IntervalOptions[1];
-        _loadingSettings = false;
+        // As preferências são carregadas (e o idioma aplicado) antes de ouvir mudanças de idioma.
+        Settings = new SettingsViewModel(AppSettings.Load());
+        Settings.ShowOfflineChanged += RebuildDevices;
+        Settings.RefreshScheduleChanged += ConfigureRefreshTimer;
+        Settings.StartupRegistrationFailed += () =>
+            Toast(T("toast.startup.failed"), T("toast.startup.failed.hint"), ToastKind.Warning);
         Instance.LanguageChanged += OnLanguageChanged;
+
+        Security = new SecurityViewModel();
+        History = new HistoryViewModel(_tracker);
+        Watchlist = new WatchlistViewModel(_tracker);
 
         IsAdmin = DemoData.IsEnabled || NetworkDiscoveryService.IsAdministrator();
         if (DemoData.IsEnabled)
@@ -65,6 +62,21 @@ public sealed partial class MainViewModel : ObservableObject
         ConfigureRefreshTimer();
     }
 
+    /// <summary>Preferências do utilizador (opções de scan, atualização automática, segundo plano, idioma).</summary>
+    public SettingsViewModel Settings { get; }
+
+    /// <summary>Vista de Segurança.</summary>
+    public SecurityViewModel Security { get; }
+
+    /// <summary>Vista de Histórico.</summary>
+    public HistoryViewModel History { get; }
+
+    /// <summary>Vista de Monitorizados.</summary>
+    public WatchlistViewModel Watchlist { get; }
+
+    /// <summary>Avisos dentro da app.</summary>
+    public ToastHost Notifications { get; } = new();
+
     /// <summary>Chamado quando a janela abre: primeiro scan imediato.</summary>
     public async Task StartAsync()
     {
@@ -76,32 +88,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool _started;
 
-    // ================================================================ Segundo plano e notificações do Windows
-
-    [ObservableProperty] private bool _windowsNotifications;
-    [ObservableProperty] private bool _closeToTray;
-    [ObservableProperty] private bool _startWithWindows;
-
-    /// <summary>Iniciar com o Windows só é possível a partir do executável publicado (Nodar.exe).</summary>
-    public bool CanStartWithWindows => StartupRegistration.CurrentCommand() != null;
-
-    partial void OnWindowsNotificationsChanged(bool value) => SaveSettings();
-
     // ================================================================ Idioma
-
-    /// <summary>Opções fixas (nunca recriadas): ver <see cref="OnLanguageChanged"/>.</summary>
-    public IReadOnlyList<LanguageOption> LanguageOptions { get; } = [new("auto"), new("pt"), new("en")];
-
-    [ObservableProperty] private LanguageOption? _selectedLanguage;
-
-    partial void OnSelectedLanguageChanged(LanguageOption? value)
-    {
-        // A caixa de seleção pode limpar a seleção por momentos: isso não é "escolher automático".
-        if (value == null)
-            return;
-        Instance.Apply(value.Code);
-        SaveSettings();
-    }
 
     private bool _refreshPending;
 
@@ -112,10 +99,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private void OnLanguageChanged()
     {
-        foreach (var option in LanguageOptions)
-            option.Refresh();
-        foreach (var option in IntervalOptions)
-            option.Refresh();
+        Settings.RefreshLabels();
         foreach (var chip in FilterChips)
             chip.Refresh();
 
@@ -130,43 +114,28 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(PageTitle));
             OnPropertyChanged(nameof(PageSubtitle));
             OnPropertyChanged(nameof(DevicesSubtitle));
-            OnPropertyChanged(nameof(SecuritySubtitle));
             OnPropertyChanged(nameof(LastScanText));
             OnPropertyChanged(nameof(ScanModeSummary));
         }, Avalonia.Threading.DispatcherPriority.Background);
     }
-    partial void OnCloseToTrayChanged(bool value) => SaveSettings();
 
-    partial void OnStartWithWindowsChanged(bool value)
-    {
-        if (_loadingSettings)
-            return;
-        if (!StartupRegistration.Set(value) && value)
-        {
-            Toast(T("toast.startup.failed"), T("toast.startup.failed.hint"), ToastKind.Warning);
-            _loadingSettings = true;
-            StartWithWindows = false;
-            _loadingSettings = false;
-        }
-        SaveSettings();
-    }
+    // ================================================================ Segundo plano e notificações do Windows
 
     /// <summary>Notificação do Windows, só quando o utilizador não está a ver a janela.</summary>
     private void NotifySystem(string title, string message)
     {
-        if (WindowsNotifications && !_platform.IsUserLooking)
+        if (Settings.WindowsNotifications && !_platform.IsUserLooking)
             _platform.NotifySystem(title, message);
     }
 
     /// <summary>A janela foi fechada mas a app continua na bandeja: explicar isso uma vez.</summary>
     public void OnHiddenToTray()
     {
-        if (_settings.TrayHintShown)
+        if (Settings.TrayHintShown)
             return;
-        _settings.TrayHintShown = true;
-        _settings.Save();
+        Settings.MarkTrayHintShown();
         _platform.NotifySystem(T("tray.hint.title"),
-            AutoRefresh ? T("tray.hint.autoRefresh") : T("tray.hint.manual"));
+            Settings.AutoRefresh ? T("tray.hint.autoRefresh") : T("tray.hint.manual"));
     }
 
     // ================================================================ Rede
@@ -217,109 +186,28 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string PageSubtitle => CurrentPage switch
     {
-        Page.Security => SecuritySubtitle,
+        Page.Security => Security.Subtitle,
         Page.History => Plural("history.subtitle", _tracker.History.Count),
-        Page.Watchlist => WatchItems.Count == 0 ? T("watch.subtitle.empty") : Plural("watch.subtitle", WatchItems.Count),
+        Page.Watchlist => Watchlist.Items.Count == 0 ? T("watch.subtitle.empty") : Plural("watch.subtitle", Watchlist.Items.Count),
         _ => DevicesSubtitle
     };
 
     [RelayCommand]
     private void Navigate(Page page) => CurrentPage = page;
 
-    // ================================================================ Opções de scan
-
-    [ObservableProperty] private bool _deepScan;
-    [ObservableProperty] private bool _portScan;
-    [ObservableProperty] private bool _osDetection;
-    [ObservableProperty] private bool _serviceDetection;
-    [ObservableProperty] private bool _vulnerabilityScan;
-    [ObservableProperty] private bool _autoRefresh;
-    [ObservableProperty] private bool _showOffline;
-    [ObservableProperty] private IntervalOption? _selectedInterval;
-
-    public IReadOnlyList<IntervalOption> IntervalOptions { get; } = [new(60), new(120), new(300), new(900)];
-
-    // Dependências: vulnerabilidades ⇒ serviços ⇒ portas.
-    partial void OnVulnerabilityScanChanged(bool value)
-    {
-        if (value) { ServiceDetection = true; }
-        SaveSettings();
-    }
-
-    partial void OnServiceDetectionChanged(bool value)
-    {
-        if (value) PortScan = true;
-        else VulnerabilityScan = false;
-        SaveSettings();
-    }
-
-    partial void OnPortScanChanged(bool value)
-    {
-        if (!value) ServiceDetection = false;
-        SaveSettings();
-    }
-
-    partial void OnDeepScanChanged(bool value) => SaveSettings();
-    partial void OnOsDetectionChanged(bool value) => SaveSettings();
-
-    partial void OnAutoRefreshChanged(bool value)
-    {
-        SaveSettings();
-        ConfigureRefreshTimer();
-    }
-
-    partial void OnSelectedIntervalChanged(IntervalOption? value)
-    {
-        SaveSettings();
-        ConfigureRefreshTimer();
-    }
-
-    partial void OnShowOfflineChanged(bool value)
-    {
-        SaveSettings();
-        RebuildDevices();
-    }
-
-    private void SaveSettings()
-    {
-        if (_loadingSettings)
-            return;
-        _settings.DeepScan = DeepScan;
-        _settings.PortScan = PortScan;
-        _settings.OsDetection = OsDetection;
-        _settings.ServiceDetection = ServiceDetection;
-        _settings.VulnerabilityScan = VulnerabilityScan;
-        _settings.AutoRefresh = AutoRefresh;
-        _settings.ShowOffline = ShowOffline;
-        _settings.RefreshIntervalSeconds = SelectedInterval?.Seconds ?? 120;
-        _settings.WindowsNotifications = WindowsNotifications;
-        _settings.CloseToTray = CloseToTray;
-        _settings.StartWithWindows = StartWithWindows;
-        _settings.Language = SelectedLanguage?.Code ?? "auto";
-        _settings.Save();
-    }
+    // ================================================================ Atualização automática
 
     private void ConfigureRefreshTimer()
     {
         _refreshTimer.Stop();
-        if (!AutoRefresh)
+        if (!Settings.AutoRefresh)
             return;
-        _refreshTimer.Interval = TimeSpan.FromSeconds(SelectedInterval?.Seconds ?? 120);
+        _refreshTimer.Interval = Settings.RefreshInterval;
         _refreshTimer.Start();
     }
 
-    public string ScanModeSummary
-    {
-        get
-        {
-            var parts = new List<string> { DeepScan ? T("mode.full") : T("mode.quick") };
-            if (PortScan) parts.Add(T("mode.ports"));
-            if (ServiceDetection) parts.Add(T("mode.services"));
-            if (VulnerabilityScan) parts.Add(T("mode.vulns"));
-            if (OsDetection) parts.Add(T("mode.os"));
-            return string.Join(" · ", parts);
-        }
-    }
+    /// <summary>As opções de scan em texto (atualiza-se quando um scan arranca e quando o idioma muda).</summary>
+    public string ScanModeSummary => Settings.ScanModeSummary;
 
     // ================================================================ Scan
 
@@ -366,11 +254,11 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var options = new ScanOptions
             {
-                DeepScan = DeepScan,
-                PortScan = PortScan,
-                OSDetection = OsDetection,
-                ServiceDetection = ServiceDetection,
-                VulnerabilityScan = VulnerabilityScan,
+                DeepScan = Settings.DeepScan,
+                PortScan = Settings.PortScan,
+                OSDetection = Settings.OsDetection,
+                ServiceDetection = Settings.ServiceDetection,
+                VulnerabilityScan = Settings.VulnerabilityScan,
                 Progress = progress,
                 DevicesDiscovered = discovered,
                 CancellationToken = _scanCts.Token
@@ -541,7 +429,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string DevicesSubtitle => !HasScanned
         ? T("devices.subtitle.searching")
-        : F("devices.subtitle.online", OnlineCount) + (OfflineCount > 0 && ShowOffline ? " · " + F("devices.subtitle.offline", OfflineCount) : "") + $" · {LastScanText.ToLower(Instance.Culture)}";
+        : F("devices.subtitle.online", OnlineCount) + (OfflineCount > 0 && Settings.ShowOffline ? " · " + F("devices.subtitle.offline", OfflineCount) : "") + $" · {LastScanText.ToLower(Instance.Culture)}";
 
     private void RebuildDevices()
     {
@@ -569,12 +457,12 @@ public sealed partial class MainViewModel : ObservableObject
 
         var offline = _tracker.OfflineEntries().ToList();
         OfflineCount = offline.Count;
-        if (ShowOffline)
+        if (Settings.ShowOffline)
         {
             var onlineKeys = items.Select(i => i.Key).ToHashSet();
             foreach (var entry in offline)
             {
-                var device = FromHistory(entry);
+                var device = HistoryViewModel.FromHistory(entry);
                 if (onlineKeys.Contains(_tracker.Key(device)))
                     continue;
                 items.Add(new DeviceItemViewModel(device, entry, _tracker.Key(device), isGateway: false, isOnline: false,
@@ -646,7 +534,13 @@ public sealed partial class MainViewModel : ObservableObject
             Toast(T("toast.watched"), F("toast.watched.hint", device.DisplayName), ToastKind.Success);
         }
         RebuildWatchlist();
-        RebuildFilterChips(); // contagem de "Monitorizados"
+        RefreshWatchedFilter();
+    }
+
+    /// <summary>A contagem de "Monitorizados" mudou: refazer as pílulas e, se esse filtro está ativo, a lista.</summary>
+    private void RefreshWatchedFilter()
+    {
+        RebuildFilterChips();
         if (SelectedFilter == "watched")
             ApplyFilter();
     }
@@ -690,117 +584,20 @@ public sealed partial class MainViewModel : ObservableObject
     private DeviceItemViewModel? FindItem(DeviceInfo device) =>
         _allDevices.FirstOrDefault(d => d.Key == _tracker.Key(device));
 
-    private static DeviceInfo FromHistory(DeviceHistoryEntry e) => new()
-    {
-        IpAddress = e.IpAddress,
-        MacAddress = e.MacAddress,
-        Hostname = e.Hostname,
-        FriendlyName = e.FriendlyName,
-        Model = e.Model,
-        Vendor = e.Vendor,
-        DeviceType = e.DeviceType,
-        Status = DeviceTracker.Offline,
-        LastSeen = e.SeenAt
-    };
-
     private static long IpSortKey(string ip) =>
         System.Net.IPAddress.TryParse(ip, out var a) && a.GetAddressBytes() is { Length: 4 } b
             ? ((long)b[0] << 24) | ((long)b[1] << 16) | ((long)b[2] << 8) | b[3]
             : long.MaxValue;
 
-    // ================================================================ Segurança
+    // ================================================================ Segurança, histórico e monitorizados
 
-    public ObservableCollection<VulnerabilityItemViewModel> AllVulnerabilities { get; } = [];
-    [ObservableProperty] private int _criticalCount;
-    [ObservableProperty] private int _highCount;
-    [ObservableProperty] private int _mediumLowCount;
-    [ObservableProperty] private bool _hasVulnerabilityData;
+    private void RebuildSecurity() => Security.Update(_lastResult, _allDevices, VulnerableDeviceCount);
 
-    public bool SecurityChecked => _lastResult?.Devices.SelectMany(d => d.Services)
-        .Any(s => s.VulnerabilityCheck != VulnerabilityCheckStatus.NotRequested) == true;
-    public bool ShowSecurityNotChecked => _lastResult != null && !SecurityChecked;
-    public bool ShowSecurityAllClear => SecurityChecked && AllVulnerabilities.Count == 0;
-
-    public string SecuritySubtitle => _lastResult == null
-        ? T("security.subtitle.waiting")
-        : !SecurityChecked
-        ? T("security.subtitle.off")
-        : AllVulnerabilities.Count == 0
-            ? T("security.allClear.hint")
-            : F("security.subtitle.count", AllVulnerabilities.Count, Plural("security.subtitle.devices", VulnerableDeviceCount));
-
-    private void RebuildSecurity()
-    {
-        AllVulnerabilities.Clear();
-        foreach (var v in _allDevices.Where(d => d.IsOnline)
-                     .SelectMany(d => d.Vulnerabilities)
-                     .OrderByDescending(v => v.IsKnownExploited)
-                     .ThenByDescending(v => v.SeverityRank)
-                     .ThenByDescending(v => v.ScoreValue))
-            AllVulnerabilities.Add(v);
-
-        CriticalCount = AllVulnerabilities.Count(v => v.Severity == "Critical");
-        HighCount = AllVulnerabilities.Count(v => v.Severity == "High");
-        MediumLowCount = AllVulnerabilities.Count - CriticalCount - HighCount;
-        HasVulnerabilityData = AllVulnerabilities.Count > 0;
-        OnPropertyChanged(nameof(SecurityChecked));
-        OnPropertyChanged(nameof(ShowSecurityNotChecked));
-        OnPropertyChanged(nameof(ShowSecurityAllClear));
-        OnPropertyChanged(nameof(SecuritySubtitle));
-    }
-
-    // ================================================================ Histórico
-
-    public ObservableCollection<HistoryEventViewModel> RecentEvents { get; } = [];
-    public ObservableCollection<DeviceItemViewModel> KnownDevices { get; } = [];
-    [ObservableProperty] private bool _hasHistory;
-
-    private void RebuildHistory()
-    {
-        RecentEvents.Clear();
-        KnownDevices.Clear();
-
-        var onlineKeys = _allDevices.Where(d => d.IsOnline)
-            .GroupBy(d => d.Key, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in _tracker.History.OrderByDescending(e => e.Status == DeviceTracker.Online).ThenByDescending(e => e.SeenAt))
-        {
-            var device = FromHistory(entry);
-            var key = _tracker.Key(device);
-            KnownDevices.Add(onlineKeys.TryGetValue(key, out var online)
-                ? online
-                : new DeviceItemViewModel(device, entry, key, false, entry.Status == DeviceTracker.Online, _tracker.FindWatched(device) != null));
-        }
-
-        foreach (var e in _tracker.History
-                     .SelectMany(h => h.Events.Select(ev => (ev, name: NameFor(h))))
-                     .OrderByDescending(x => x.ev.Timestamp)
-                     .Take(40))
-            RecentEvents.Add(new HistoryEventViewModel(e.ev, e.name));
-
-        HasHistory = RecentEvents.Count > 0;
-    }
-
-    private static string NameFor(DeviceHistoryEntry h) =>
-        !string.IsNullOrWhiteSpace(h.FriendlyName) ? h.FriendlyName :
-        !string.IsNullOrWhiteSpace(h.Hostname) ? h.Hostname.Split('.')[0] :
-        !Visuals.IsUnknownVendor(h.Vendor) ? Visuals.VendorLabel(h.Vendor) : h.IpAddress;
-
-    // ================================================================ Monitorizados
-
-    public ObservableCollection<WatchItemViewModel> WatchItems { get; } = [];
-    [ObservableProperty] private bool _hasWatchItems;
+    private void RebuildHistory() => History.Update(_allDevices);
 
     private void RebuildWatchlist()
     {
-        WatchItems.Clear();
-        var online = _lastResult?.Devices ?? [];
-        foreach (var w in _tracker.Watchlist)
-        {
-            var isOnline = online.Any(d => _tracker.Key(d) == _tracker.Key(w.MacAddress, w.IpAddress));
-            WatchItems.Add(new WatchItemViewModel(w, isOnline, _tracker.Save));
-        }
-        HasWatchItems = WatchItems.Count > 0;
+        Watchlist.Update(_lastResult?.Devices ?? new List<DeviceInfo>());
         OnPropertyChanged(nameof(PageSubtitle));
     }
 
@@ -813,6 +610,7 @@ public sealed partial class MainViewModel : ObservableObject
         foreach (var d in _allDevices.Where(d => _tracker.FindWatched(d.Device) == null))
             d.IsWatched = false;
         RebuildWatchlist();
+        RefreshWatchedFilter();
     }
 
     // ================================================================ Exportar
@@ -874,52 +672,10 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    // ================================================================ Notificações
+    // ================================================================ Avisos
 
-    public ObservableCollection<ToastViewModel> Toasts { get; } = [];
-
-    private void Toast(string title, string message, ToastKind kind)
-    {
-        var toast = new ToastViewModel(title, message, kind);
-        Toasts.Add(toast);
-        while (Toasts.Count > 4)
-            Toasts.RemoveAt(0);
-
-        DispatcherTimer.RunOnce(() => Toasts.Remove(toast), TimeSpan.FromSeconds(kind == ToastKind.Danger ? 9 : 5));
-    }
+    private void Toast(string title, string message, ToastKind kind) => Notifications.Show(title, message, kind);
 
     public void ReportUnexpectedError(Exception ex) =>
         Toast(T("toast.unexpected"), F("toast.unexpected.hint", ex.Message, CrashLog.Directory), ToastKind.Danger);
-
-    [RelayCommand]
-    private void DismissToast(ToastViewModel? toast)
-    {
-        if (toast != null)
-            Toasts.Remove(toast);
-    }
-}
-
-/// <summary>Opção de idioma. Classe (não record): a identidade não muda e o texto atualiza-se sozinho.</summary>
-public sealed class LanguageOption(string code) : ObservableObject
-{
-    public string Code { get; } = code;
-
-    public string Label => Code switch
-    {
-        "pt" => "Português",
-        "en" => "English",
-        // "Automático" segue o Windows: mostrar o idioma do sistema, não o que está escolhido agora.
-        _ => F("language.auto", Loc.SystemLanguage() == "pt" ? "Português" : "English")
-    };
-
-    public void Refresh() => OnPropertyChanged(nameof(Label));
-    public override string ToString() => Label;
-}
-
-public sealed class IntervalOption(int seconds) : ObservableObject
-{
-    public int Seconds { get; } = seconds;
-    public string Label => Plural("interval.minutes", Seconds / 60);
-    public void Refresh() => OnPropertyChanged(nameof(Label));
-    public override string ToString() => Label;
 }

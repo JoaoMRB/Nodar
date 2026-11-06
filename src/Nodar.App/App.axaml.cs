@@ -52,7 +52,7 @@ public partial class App : Application
             {
                 if (_exiting)
                     return;
-                if (viewModel.CloseToTray && _tray?.IsVisible == true)
+                if (viewModel.Settings.CloseToTray && _tray?.IsVisible == true)
                 {
                     e.Cancel = true;
                     window.Hide();

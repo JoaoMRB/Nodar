@@ -44,8 +44,8 @@ public class LanguageSwitchTests
 
         // A mesma ligação que está no painel de opções (o painel em si só existe quando é aberto).
         var combo = new ComboBox();
-        combo.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainViewModel.LanguageOptions)) { Source = vm });
-        combo.Bind(SelectingItemsControl.SelectedItemProperty, new Binding(nameof(MainViewModel.SelectedLanguage)) { Source = vm, Mode = BindingMode.TwoWay });
+        combo.Bind(ItemsControl.ItemsSourceProperty, new Binding("Settings.LanguageOptions") { Source = vm });
+        combo.Bind(SelectingItemsControl.SelectedItemProperty, new Binding("Settings.SelectedLanguage") { Source = vm, Mode = BindingMode.TwoWay });
         var host = window.GetVisualDescendants().OfType<Panel>().First();
         host.Children.Add(combo);
         Dispatcher.UIThread.RunJobs();
@@ -66,7 +66,7 @@ public class LanguageSwitchTests
     public void Choosing_languages_changes_language_at_most_once_each_time()
     {
         var (_, vm, combo) = Create();
-        var original = vm.SelectedLanguage;
+        var original = vm.Settings.SelectedLanguage;
         var changes = 0;
         void Count() => changes++;
         Loc.Instance.LanguageChanged += Count;
@@ -75,17 +75,17 @@ public class LanguageSwitchTests
             foreach (var code in new[] { "en", "pt", "en", "auto", "en", "pt" })
             {
                 var before = changes;
-                combo.SelectedItem = vm.LanguageOptions.First(o => o.Code == code);
+                combo.SelectedItem = vm.Settings.LanguageOptions.First(o => o.Code == code);
                 Pump();
                 Assert.InRange(changes - before, 0, 1);
-                Assert.Equal(code, vm.SelectedLanguage?.Code);
+                Assert.Equal(code, vm.Settings.SelectedLanguage?.Code);
                 Assert.Equal(code == "auto" ? Loc.SystemLanguage() : code, Loc.Instance.Language);
             }
         }
         finally
         {
             Loc.Instance.LanguageChanged -= Count;
-            vm.SelectedLanguage = original ?? vm.LanguageOptions[0];
+            vm.Settings.SelectedLanguage = original ?? vm.Settings.LanguageOptions[0];
             Pump();
         }
     }
@@ -94,16 +94,16 @@ public class LanguageSwitchTests
     public void Xaml_texts_follow_the_language()
     {
         var (window, vm, combo) = Create();
-        var original = vm.SelectedLanguage;
+        var original = vm.Settings.SelectedLanguage;
         try
         {
-            combo.SelectedItem = vm.LanguageOptions.First(o => o.Code == "en");
+            combo.SelectedItem = vm.Settings.LanguageOptions.First(o => o.Code == "en");
             Pump();
             var texts = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
             Assert.Contains("Local network", texts);   // {l:T brand.subtitle}
             Assert.Contains("Security", texts);        // navegação
 
-            combo.SelectedItem = vm.LanguageOptions.First(o => o.Code == "pt");
+            combo.SelectedItem = vm.Settings.LanguageOptions.First(o => o.Code == "pt");
             Pump();
             texts = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
             Assert.Contains("Rede local", texts);
@@ -111,7 +111,7 @@ public class LanguageSwitchTests
         }
         finally
         {
-            vm.SelectedLanguage = original ?? vm.LanguageOptions[0];
+            vm.Settings.SelectedLanguage = original ?? vm.Settings.LanguageOptions[0];
             Pump();
         }
     }
@@ -120,19 +120,19 @@ public class LanguageSwitchTests
     public void Options_keep_identity_and_auto_shows_the_system_language()
     {
         var (_, vm, combo) = Create();
-        var original = vm.SelectedLanguage;
-        var optionsBefore = vm.LanguageOptions;
+        var original = vm.Settings.SelectedLanguage;
+        var optionsBefore = vm.Settings.LanguageOptions;
         try
         {
-            combo.SelectedItem = vm.LanguageOptions.First(o => o.Code == "en");
+            combo.SelectedItem = vm.Settings.LanguageOptions.First(o => o.Code == "en");
             Pump();
-            Assert.Same(optionsBefore, vm.LanguageOptions); // a lista não é recriada
+            Assert.Same(optionsBefore, vm.Settings.LanguageOptions); // a lista não é recriada
             var system = Loc.SystemLanguage() == "pt" ? "Português" : "English";
-            Assert.Contains(system, vm.LanguageOptions.First(o => o.Code == "auto").Label);
+            Assert.Contains(system, vm.Settings.LanguageOptions.First(o => o.Code == "auto").Label);
         }
         finally
         {
-            vm.SelectedLanguage = original ?? vm.LanguageOptions[0];
+            vm.Settings.SelectedLanguage = original ?? vm.Settings.LanguageOptions[0];
             Pump();
         }
     }

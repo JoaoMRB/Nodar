@@ -157,6 +157,10 @@ Without a key, the NVD allows 5 requests per 30 seconds, so the first lookup of 
 src/Nodar.App/                       # Interface (Avalonia, MVVM)
 ├── Views/MainWindow.axaml           # Main window and the four views
 ├── ViewModels/                      # Interface state and commands
+│   ├── MainViewModel.cs             # Scan, device list, filters and navigation
+│   ├── SettingsViewModel.cs         # Preferences (scan options, background, language)
+│   ├── Security/History/WatchlistViewModel.cs  # Security, History and Watchlist views
+│   └── ToastHost.cs                 # In-app notices
 ├── Localization/TExtension.cs       # {l:T key} markup extension for translated text
 ├── Styles/                          # Theme (colors, shadows), control styles and icons
 └── Services/                        # Tray and notifications, single instance, start with Windows, demo

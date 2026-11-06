@@ -73,7 +73,7 @@ WaitFor(() => vm.HasScanned, TimeSpan.FromSeconds(5));
 if (!vm.HasScanned)
     _ = vm.StartAsync();
 WaitFor(() => vm.HasScanned && !vm.IsScanning, TimeSpan.FromMinutes(3));
-vm.Toasts.Clear();
+vm.Notifications.Items.Clear();
 
 // 1. Dispositivos
 Save("dispositivos.png");

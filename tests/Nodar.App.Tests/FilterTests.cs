@@ -20,7 +20,7 @@ public class FilterTests
         Vulnerabilities = vulnerable ? [new VulnerabilityInfo { CVE = "CVE-2024-0001", Severity = "High" }] : []
     };
 
-    private static MainViewModel CreateWithDevices()
+    internal static MainViewModel CreateWithDevices()
     {
         var window = new MainWindow();
         var vm = new MainViewModel(new WindowPlatformServices(window));

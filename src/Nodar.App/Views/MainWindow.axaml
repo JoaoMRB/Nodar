@@ -125,7 +125,7 @@
               <Grid ColumnDefinitions="16,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Shield}" />
                 <TextBlock Grid.Column="1" Text="{l:T nav.security}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
-                <Border Grid.Column="2" Classes="chip" Padding="7,1" Background="#26FF4D6D" IsVisible="{Binding HasVulnerabilityData}">
+                <Border Grid.Column="2" Classes="chip" Padding="7,1" Background="#26FF4D6D" IsVisible="{Binding Security.HasVulnerabilityData}">
                   <TextBlock Text="{Binding VulnerabilityCount}" Foreground="{StaticResource CriticalBrush}" />
                 </Border>
               </Grid>
@@ -144,8 +144,8 @@
               <Grid ColumnDefinitions="16,*,Auto">
                 <Path Classes="icon" Data="{StaticResource Icon.Eye}" />
                 <TextBlock Grid.Column="1" Text="{l:T nav.watchlist}" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{Binding $parent[Button].Foreground}" />
-                <Border Grid.Column="2" Classes="chip" Padding="7,1" IsVisible="{Binding HasWatchItems}">
-                  <TextBlock Text="{Binding WatchItems.Count}" Foreground="{StaticResource TextSecondaryBrush}" />
+                <Border Grid.Column="2" Classes="chip" Padding="7,1" IsVisible="{Binding Watchlist.HasItems}">
+                  <TextBlock Text="{Binding Watchlist.Items.Count}" Foreground="{StaticResource TextSecondaryBrush}" />
                 </Border>
               </Grid>
             </Button>
@@ -184,27 +184,27 @@
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.deep}" />
                         <TextBlock Classes="caption" Text="{l:T options.deep.hint}" TextWrapping="Wrap" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding DeepScan}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.DeepScan}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.ports}" />
                         <TextBlock Classes="caption" Text="{l:T options.ports.hint}" TextWrapping="Wrap" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding PortScan}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.PortScan}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.services}" />
                         <TextBlock Classes="caption" Text="{l:T options.services.hint}" TextWrapping="Wrap" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding ServiceDetection}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.ServiceDetection}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.vulns}" />
                         <TextBlock Classes="caption" Text="{l:T options.vulns.hint}" TextWrapping="Wrap" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding VulnerabilityScan}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.VulnerabilityScan}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.os}" />
                         <TextBlock Classes="caption" Text="{l:T options.os.hint}" TextWrapping="Wrap" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding OsDetection}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.OsDetection}" />
                     </Grid>
 
                     <Border Classes="divider" />
@@ -212,11 +212,11 @@
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.autoRefresh}" />
                         <TextBlock Classes="caption" Text="{l:T options.autoRefresh.hint}" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoRefresh}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.AutoRefresh}" />
                     </Grid>
-                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AutoRefresh}">
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Settings.AutoRefresh}">
                       <TextBlock Classes="caption" Text="{l:T options.interval}" VerticalAlignment="Center" />
-                      <ComboBox Grid.Column="1" MinWidth="140" ItemsSource="{Binding IntervalOptions}" SelectedItem="{Binding SelectedInterval}">
+                      <ComboBox Grid.Column="1" MinWidth="140" ItemsSource="{Binding Settings.IntervalOptions}" SelectedItem="{Binding Settings.SelectedInterval}">
                         <ComboBox.ItemTemplate>
                           <DataTemplate x:DataType="vm:IntervalOption"><TextBlock Text="{Binding Label}" /></DataTemplate>
                         </ComboBox.ItemTemplate>
@@ -225,7 +225,7 @@
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.showOffline}" />
                         <TextBlock Classes="caption" Text="{l:T options.showOffline.hint}" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowOffline}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.ShowOffline}" />
                     </Grid>
 
                     <Border Classes="divider" />
@@ -234,27 +234,27 @@
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.notifications}" />
                         <TextBlock Classes="caption" Text="{l:T options.notifications.hint}" TextWrapping="Wrap" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding WindowsNotifications}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.WindowsNotifications}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.closeToTray}" />
                         <TextBlock Classes="caption" Text="{l:T options.closeToTray.hint}" TextWrapping="Wrap" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding CloseToTray}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.CloseToTray}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.language}" />
                         <TextBlock Classes="caption" Text="{l:T options.language.hint}" TextWrapping="Wrap" /></StackPanel>
                       <ComboBox Grid.Column="1" MinWidth="150" VerticalAlignment="Center"
-                                ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding SelectedLanguage}">
+                                ItemsSource="{Binding Settings.LanguageOptions}" SelectedItem="{Binding Settings.SelectedLanguage}">
                         <ComboBox.ItemTemplate>
                           <DataTemplate x:DataType="vm:LanguageOption"><TextBlock Text="{Binding Label}" /></DataTemplate>
                         </ComboBox.ItemTemplate>
                       </ComboBox>
                     </Grid>
-                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CanStartWithWindows}">
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Settings.CanStartWithWindows}">
                       <StackPanel Spacing="1"><TextBlock Classes="h3" Text="{l:T options.startWithWindows}" />
                         <TextBlock Classes="caption" Text="{l:T options.startWithWindows.hint}" TextWrapping="Wrap" /></StackPanel>
-                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartWithWindows}" />
+                      <ToggleSwitch Grid.Column="1" IsChecked="{Binding Settings.StartWithWindows}" />
                     </Grid>
                   </StackPanel>
                 </Flyout>
@@ -626,18 +626,18 @@
           <!-- ============ Segurança -->
           <ScrollViewer IsVisible="{Binding IsSecurityPage}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="18" Margin="32,0,28,24">
-              <UniformGrid Columns="4" Margin="-6,0,-6,0" IsVisible="{Binding SecurityChecked}">
+              <UniformGrid Columns="4" Margin="-6,0,-6,0" IsVisible="{Binding Security.IsChecked}">
                 <Border Classes="card" Margin="6" Padding="16,14">
                   <StackPanel Spacing="6"><TextBlock Classes="caption" Text="{l:T security.critical}" />
-                    <TextBlock Classes="stat" Text="{Binding CriticalCount}" Foreground="{StaticResource CriticalBrush}" /></StackPanel>
+                    <TextBlock Classes="stat" Text="{Binding Security.CriticalCount}" Foreground="{StaticResource CriticalBrush}" /></StackPanel>
                 </Border>
                 <Border Classes="card" Margin="6" Padding="16,14">
                   <StackPanel Spacing="6"><TextBlock Classes="caption" Text="{l:T security.high}" />
-                    <TextBlock Classes="stat" Text="{Binding HighCount}" Foreground="#FB923C" /></StackPanel>
+                    <TextBlock Classes="stat" Text="{Binding Security.HighCount}" Foreground="#FB923C" /></StackPanel>
                 </Border>
                 <Border Classes="card" Margin="6" Padding="16,14">
                   <StackPanel Spacing="6"><TextBlock Classes="caption" Text="{l:T security.mediumLow}" />
-                    <TextBlock Classes="stat" Text="{Binding MediumLowCount}" Foreground="{StaticResource WarningBrush}" /></StackPanel>
+                    <TextBlock Classes="stat" Text="{Binding Security.MediumLowCount}" Foreground="{StaticResource WarningBrush}" /></StackPanel>
                 </Border>
                 <Border Classes="card" Margin="6" Padding="16,14">
                   <StackPanel Spacing="6">
@@ -648,7 +648,7 @@
                 </Border>
               </UniformGrid>
 
-              <Border Classes="card" Padding="14,12" IsVisible="{Binding SecurityChecked}">
+              <Border Classes="card" Padding="14,12" IsVisible="{Binding Security.IsChecked}">
                 <Grid ColumnDefinitions="Auto,*">
                   <Path Classes="icon" Data="{StaticResource Icon.Info}" Stroke="{StaticResource InfoBrush}" VerticalAlignment="Top" />
                   <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="4">
@@ -659,7 +659,7 @@
                 </Grid>
               </Border>
 
-              <ItemsControl ItemsSource="{Binding AllVulnerabilities}">
+              <ItemsControl ItemsSource="{Binding Security.AllVulnerabilities}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:VulnerabilityItemViewModel">
                     <Border Classes="card" Padding="0" Margin="0,0,0,10" ClipToBounds="True">
@@ -694,14 +694,14 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,60,0,0" IsVisible="{Binding ShowSecurityAllClear}">
+              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,60,0,0" IsVisible="{Binding Security.ShowAllClear}">
                 <Border Width="64" Height="64" CornerRadius="20" Background="#1A34D399" HorizontalAlignment="Center">
                   <Path Classes="icon xl" Data="{StaticResource Icon.ShieldCheck}" Stroke="{StaticResource SuccessBrush}" />
                 </Border>
                 <TextBlock Classes="h2" Text="{l:T security.allClear}" HorizontalAlignment="Center" />
                 <TextBlock Classes="caption" Text="{l:T security.allClear.hint}" HorizontalAlignment="Center" />
               </StackPanel>
-              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,60,0,0" IsVisible="{Binding ShowSecurityNotChecked}">
+              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,60,0,0" IsVisible="{Binding Security.ShowNotChecked}">
                 <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource SurfaceStrongBrush}" HorizontalAlignment="Center">
                   <Path Classes="icon xl" Data="{StaticResource Icon.Shield}" Stroke="{StaticResource TextTertiaryBrush}" />
                 </Border>
@@ -716,7 +716,7 @@
             <Border Classes="card" Padding="6">
               <Grid RowDefinitions="Auto,*">
                 <TextBlock Classes="overline" Text="{l:T history.known}" Margin="14,12,0,10" />
-                <ListBox Grid.Row="1" Classes="clean" ItemsSource="{Binding KnownDevices}" Padding="8,0,8,4">
+                <ListBox Grid.Row="1" Classes="clean" ItemsSource="{Binding History.KnownDevices}" Padding="8,0,8,4">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:DeviceItemViewModel">
                       <Border Classes="row" Background="Transparent" BorderThickness="0" Padding="8">
@@ -750,8 +750,8 @@
                 <TextBlock Classes="overline" Text="{l:T history.recent}" Margin="0,0,0,14" />
                 <ScrollViewer Grid.Row="1">
                   <StackPanel>
-                    <TextBlock Classes="caption" Text="{l:T history.empty}" IsVisible="{Binding !HasHistory}" />
-                    <ItemsControl ItemsSource="{Binding RecentEvents}">
+                    <TextBlock Classes="caption" Text="{l:T history.empty}" IsVisible="{Binding !History.HasHistory}" />
+                    <ItemsControl ItemsSource="{Binding History.RecentEvents}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:HistoryEventViewModel">
                           <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,14">
@@ -775,7 +775,7 @@
           <!-- ============ Monitorizados -->
           <ScrollViewer IsVisible="{Binding IsWatchlistPage}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="32,0,28,24">
-              <ItemsControl ItemsSource="{Binding WatchItems}">
+              <ItemsControl ItemsSource="{Binding Watchlist.Items}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
@@ -815,7 +815,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,80,0,0" IsVisible="{Binding !HasWatchItems}">
+              <StackPanel HorizontalAlignment="Center" Spacing="10" Margin="0,80,0,0" IsVisible="{Binding !Watchlist.HasItems}">
                 <Border Width="64" Height="64" CornerRadius="20" Background="#1AFBBF24" HorizontalAlignment="Center">
                   <Path Classes="icon xl" Data="{StaticResource Icon.Star}" Stroke="{StaticResource WarningBrush}" />
                 </Border>
@@ -829,7 +829,7 @@
     </Grid>
 
     <!-- ======================================================== Notificações -->
-    <ItemsControl ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,24" Width="340">
+    <ItemsControl ItemsSource="{Binding Notifications.Items}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,24" Width="340">
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:ToastViewModel">
           <Border Classes="panel toast" Padding="14,12" Margin="0,8,0,0" CornerRadius="14">
@@ -842,7 +842,7 @@
                 <TextBlock Classes="caption" Text="{Binding Message}" TextWrapping="Wrap" IsVisible="{Binding HasMessage}" />
               </StackPanel>
               <Button Grid.Column="2" Classes="flat icon" Width="26" Height="26" VerticalAlignment="Top"
-                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DismissToastCommand}" CommandParameter="{Binding}">
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).Notifications.DismissCommand}" CommandParameter="{Binding}">
                 <Path Classes="icon sm" Data="{StaticResource Icon.Close}" MaxWidth="10" MaxHeight="10" />
               </Button>
             </Grid>

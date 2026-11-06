@@ -157,6 +157,10 @@ Sem chave, a NVD limita a 5 pedidos por 30 segundos, e a primeira consulta de ca
 src/Nodar.App/                       # Interface (Avalonia, MVVM)
 ├── Views/MainWindow.axaml           # Janela principal e as quatro vistas
 ├── ViewModels/                      # Estado e comandos da interface
+│   ├── MainViewModel.cs             # Scan, lista de dispositivos, filtros e navegação
+│   ├── SettingsViewModel.cs         # Preferências (opções de scan, segundo plano, idioma)
+│   ├── Security/History/WatchlistViewModel.cs  # Vistas Segurança, Histórico e Monitorizados
+│   └── ToastHost.cs                 # Avisos dentro da app
 ├── Localization/TExtension.cs       # Extensão {l:T chave} para textos traduzidos
 ├── Styles/                          # Tema (cores, sombras), estilos dos controlos e ícones
 └── Services/                        # Bandeja e notificações, instância única, arranque com o Windows, demonstração
