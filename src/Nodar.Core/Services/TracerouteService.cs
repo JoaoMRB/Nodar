@@ -27,16 +27,11 @@ public static class TracerouteService
             hops.Add(hop);
 
             // Stop if we reached the target
-            if (!hop.TimedOut && hop.IPAddress != "0.0.0.0")
-            {
-                try
-                {
-                    var targetIp = IPAddress.Parse(target);
-                    if (IPAddress.Parse(hop.IPAddress).Equals(targetIp))
-                        break;
-                }
-                catch { }
-            }
+            if (!hop.TimedOut && hop.IPAddress != "0.0.0.0"
+                && IPAddress.TryParse(target, out var targetIp)
+                && IPAddress.TryParse(hop.IPAddress, out var hopIp)
+                && hopIp.Equals(targetIp))
+                break;
 
             // Stop if we had 3 consecutive timeouts
             if (hops.Count >= 3 && 
@@ -78,13 +73,13 @@ public static class TracerouteService
                     var hostEntry = await Dns.GetHostEntryAsync(reply.Address);
                     hop.Hostname = hostEntry.HostName;
                 }
-                catch
+                catch (Exception ex) when (NodarLog.Swallow(ex, "Traceroute: nome do salto", ct))
                 {
-                    hop.Hostname = "";
+                    hop.Hostname = ""; // sem registo PTR
                 }
             }
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Traceroute: salto", ct))
         {
             hop.TimedOut = true;
         }

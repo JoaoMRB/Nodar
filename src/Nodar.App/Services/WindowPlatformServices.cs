@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using Nodar.Core;
 
 namespace Nodar.App.Services;
 
@@ -56,7 +57,7 @@ public sealed class WindowPlatformServices(Window window) : IPlatformServices
         {
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Abrir ligação no browser"))
         {
             // Sem browser predefinido.
         }

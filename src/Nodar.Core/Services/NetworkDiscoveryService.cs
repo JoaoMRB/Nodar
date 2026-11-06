@@ -306,7 +306,7 @@ public static class NetworkDiscoveryService
             var principal = new System.Security.Principal.WindowsPrincipal(identity);
             return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Verificar se é administrador"))
         {
             return false;
         }
@@ -356,7 +356,7 @@ public static class NetworkDiscoveryService
             if (SendARP(dest, 0, mac, ref len) == 0)
                 return FormatMac(mac);
         }
-        catch { }
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Resolver o MAC (SendARP)")) { }
 
         return "";
     }
@@ -376,9 +376,9 @@ public static class NetworkDiscoveryService
             var entry = await lookup;
             return entry.HostName != ip ? entry.HostName : "";
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "DNS inverso"))
         {
-            return "";
+            return ""; // sem registo PTR para este IP
         }
     }
 
@@ -403,13 +403,9 @@ public static class NetworkDiscoveryService
                 if (client.Connected)
                     open.Add(port);
             }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            catch (Exception ex) when (NodarLog.Swallow(ex, "Scan de portas", token))
             {
-                throw; // cancelamento do scan pelo utilizador
-            }
-            catch
-            {
-                // fechada, filtrada ou sem resposta em 300 ms
+                // fechada, filtrada ou sem resposta em 300 ms (o cancelamento do utilizador segue o seu caminho)
             }
         });
 

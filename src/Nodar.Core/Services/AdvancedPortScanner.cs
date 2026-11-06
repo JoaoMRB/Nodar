@@ -74,7 +74,7 @@ public static class AdvancedPortScanner
                 _ => "Unknown"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             result.Status = "error";
             result.Reason = ex.Message;
@@ -98,7 +98,7 @@ public static class AdvancedPortScanner
             }
             return "closed";
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Scan de portas: TCP connect", ct))
         {
             return "filtered";
         }
@@ -119,7 +119,7 @@ public static class AdvancedPortScanner
             // For now, use TCP connect as fallback
             return await TCPConnectScan(ip, port, ct);
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Scan de portas: SYN", ct))
         {
             return "filtered";
         }
@@ -148,7 +148,7 @@ public static class AdvancedPortScanner
             // Linux responds with RST for closed ports
             return "open|filtered";
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Scan de portas: stealth", ct))
         {
             return "filtered";
         }
@@ -171,7 +171,7 @@ public static class AdvancedPortScanner
             
             return "unfiltered";
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Scan de portas: ACK", ct))
         {
             return "filtered";
         }
@@ -222,7 +222,7 @@ public static class AdvancedPortScanner
                 return IdentifyServiceFromBanner(banner, port);
             }
         }
-        catch { }
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Identificar serviço", ct)) { }
 
         return GetDefaultService(port);
     }

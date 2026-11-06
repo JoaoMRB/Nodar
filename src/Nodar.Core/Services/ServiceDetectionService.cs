@@ -75,9 +75,10 @@ public static class ServiceDetectionService
                 if (!string.IsNullOrEmpty(banner))
                     serviceInfo = FromBanner(port, serviceName, banner);
             }
-            catch
+            catch (Exception ex) when (NodarLog.Swallow(ex, "Leitura de banner", ct))
             {
-                // Banner grab failed, but we still have service info from port number
+                // Sem banner, mas o serviço continua conhecido pelo número da porta. O cancelamento do
+                // utilizador não é engolido aqui (antes era: o "Parar" podia ser ignorado neste ponto).
             }
 
             services.Add(serviceInfo);
@@ -187,11 +188,7 @@ public static class ServiceDetectionService
                 return await ReadBannerAsync(stream, isHttp, options, ct);
             }
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw; // cancelamento pedido pelo utilizador
-        }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, $"Banner da porta {port}", ct))
         {
             return ""; // timeout, ligação recusada, TLS falhou, etc.
         }

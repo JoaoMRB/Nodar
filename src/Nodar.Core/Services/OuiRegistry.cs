@@ -80,7 +80,7 @@ public static class OuiRegistry
                     return;
                 }
             }
-            catch
+            catch (Exception ex) when (NodarLog.Swallow(ex, "Descarregar o registo IEEE de fabricantes"))
             {
                 // Sem internet: usar cache antiga se houver.
             }
@@ -88,7 +88,7 @@ public static class OuiRegistry
             if (cached != null)
                 _table = ReadTsv(CachePath);
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Carregar o registo de fabricantes"))
         {
             // Registo opcional: fica a tabela embutida.
         }

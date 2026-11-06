@@ -51,7 +51,7 @@ public static class SsdpProbe
 
             // Duas vezes: UDP perde pacotes, sobretudo em Wi-Fi.
             await udp.SendAsync(search, MulticastEndpoint, ct);
-            _ = Task.Delay(400, ct).ContinueWith(async _ => { try { await udp.SendAsync(search, MulticastEndpoint, ct); } catch { } },
+            _ = Task.Delay(400, ct).ContinueWith(async _ => { try { await udp.SendAsync(search, MulticastEndpoint, ct); } catch (Exception ex) when (NodarLog.Swallow(ex, "SSDP: segundo envio")) { } },
                 ct, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);

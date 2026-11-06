@@ -1,3 +1,4 @@
+using Nodar.Core;
 using Nodar.Core.Models;
 using static Nodar.Core.Localization.Loc;
 using Nodar.Core.Services.Vulnerabilities;
@@ -22,7 +23,8 @@ public static class DemoData
         var dir = Path.Combine(Path.GetTempPath(), "nodar-demo");
         if (IsEnabled)
         {
-            try { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); } catch { }
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+            catch (Exception ex) when (NodarLog.Swallow(ex, "Limpar a pasta da demonstração")) { } // em uso: reaproveita-se
         }
         return dir;
     }

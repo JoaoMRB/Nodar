@@ -58,7 +58,7 @@ public static class OSFingerprintService
                 result = await SimpleOSAnalysis(ip, ttl, windowSize, ct);
             }
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Deteção de sistema operativo", ct))
         {
             result.LikelyOS = "Desconhecido";
             result.Confidence = "Baixa";
@@ -116,7 +116,7 @@ public static class OSFingerprintService
                 return "1460"; // Common MSS value
             }
         }
-        catch { }
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Fingerprint: MSS", ct)) { }
 
         return null;
     }
@@ -135,7 +135,7 @@ public static class OSFingerprintService
                 return true; // Most modern systems set DF flag
             }
         }
-        catch { }
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Fingerprint: flag DF", ct)) { }
 
         return false;
     }
@@ -170,7 +170,7 @@ public static class OSFingerprintService
                     };
                 }
             }
-            catch { }
+            catch (Exception ex) when (NodarLog.Swallow(ex, "Fingerprint: comportamento das portas", ct)) { }
         }
 
         return score;
@@ -191,7 +191,7 @@ public static class OSFingerprintService
                 return 65535; // Default Windows value
             }
         }
-        catch { }
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Fingerprint: janela TCP", ct)) { }
 
         return 0;
     }
@@ -208,7 +208,7 @@ public static class OSFingerprintService
                 return reply.Options?.Ttl ?? 64;
             }
         }
-        catch { }
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Fingerprint: TTL", ct)) { }
 
         return 64; // Default Linux value
     }
@@ -236,7 +236,7 @@ public static class OSFingerprintService
                     behaviors.Add($"Port {port}: Closed/Filtered");
                 }
             }
-            catch
+            catch (Exception ex) when (NodarLog.Swallow(ex, "Fingerprint: portas", ct))
             {
                 behaviors.Add($"Port {port}: Filtered");
             }
@@ -249,21 +249,10 @@ public static class OSFingerprintService
     {
         var responses = new List<string>();
 
-        try
-        {
-            // SYN scan behavior
-            responses.Add("SYN: Standard");
-            
-            // FIN scan behavior (Windows typically doesn't respond, Linux might)
-            responses.Add("FIN: No response");
-            
-            // XMAS scan behavior
-            responses.Add("XMAS: No response");
-        }
-        catch
-        {
-            responses.Add("Flags: Error");
-        }
+        // Valores fixos (sem sondas reais): nada aqui pode falhar, por isso não há try/catch.
+        responses.Add("SYN: Standard");
+        responses.Add("FIN: No response"); // Windows normalmente não responde, o Linux pode
+        responses.Add("XMAS: No response");
 
         return string.Join(", ", responses);
     }

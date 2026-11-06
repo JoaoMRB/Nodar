@@ -75,7 +75,7 @@ public static class MdnsProbe
 
             // UDP pode perder pacotes (sobretudo em Wi-Fi): perguntar duas vezes, como recomenda a RFC 6762.
             await SendQueriesAsync();
-            _ = Task.Delay(500, ct).ContinueWith(async _ => { try { await SendQueriesAsync(); } catch { } },
+            _ = Task.Delay(500, ct).ContinueWith(async _ => { try { await SendQueriesAsync(); } catch (Exception ex) when (NodarLog.Swallow(ex, "mDNS: segundo envio")) { } },
                 ct, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
 
             // 3. Recolher respostas durante o tempo de escuta.

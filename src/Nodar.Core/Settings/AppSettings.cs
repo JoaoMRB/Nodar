@@ -46,9 +46,13 @@ public sealed class AppSettings
             if (File.Exists(path))
                 return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Options) ?? new AppSettings();
         }
-        catch
+        catch (JsonException ex)
         {
-            // Ficheiro inválido: usar valores por omissão.
+            NodarLog.CorruptFile(path, ex); // ficheiro inválido: valores por omissão, com cópia do original
+        }
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Ler as definições"))
+        {
+            // Ficheiro bloqueado ou sem permissões: valores por omissão.
         }
         return new AppSettings();
     }
@@ -63,8 +67,9 @@ public sealed class AppSettings
             {
                 root = File.Exists(path) ? JsonNode.Parse(File.ReadAllText(path)) as JsonObject ?? new JsonObject() : new JsonObject();
             }
-            catch
+            catch (JsonException ex)
             {
+                NodarLog.CorruptFile(path, ex); // não perder o que lá estava (ex.: a chave da NVD)
                 root = new JsonObject();
             }
 
@@ -77,7 +82,7 @@ public sealed class AppSettings
             File.WriteAllText(temp, root.ToJsonString(Options));
             File.Move(temp, path, overwrite: true);
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Gravar as definições"))
         {
             // Não conseguir gravar preferências não deve interromper a app.
         }

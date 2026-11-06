@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using Nodar.Core;
 
 namespace Nodar.App.Services;
 
@@ -43,9 +44,9 @@ public static class StartupRegistration
             key.SetValue(ValueName, command, RegistryValueKind.String);
             return true;
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Registar o arranque com o Windows"))
         {
-            return false;
+            return false; // sem acesso ao registo
         }
     }
 
@@ -61,7 +62,7 @@ public static class StartupRegistration
             if (current != null && key?.GetValue(ValueName) as string != current)
                 Set(true);
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Atualizar o arranque com o Windows"))
         {
             // Sem acesso ao registo: ignorar.
         }

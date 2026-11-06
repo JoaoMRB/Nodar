@@ -15,8 +15,11 @@ public static class CrashLog
             File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {context}{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}");
             return path;
         }
-        catch
+        catch (Exception logError) when (logError is IOException or UnauthorizedAccessException)
         {
+            // O registo é o último recurso: se nem ele consegue escrever (disco cheio, sem permissões),
+            // não há onde dar o erro, e falhar aqui só causaria um segundo erro.
+            System.Diagnostics.Debug.WriteLine($"[Nodar] Não foi possível escrever o registo: {logError.Message}");
             return null;
         }
     }

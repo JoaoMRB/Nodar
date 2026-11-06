@@ -42,11 +42,7 @@ public static class DnsVersionProbe
                 // Pacote que não corresponde à nossa consulta: continuar à espera.
             }
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Versão do servidor DNS", ct))
         {
             return null; // timeout, ICMP port unreachable, etc.
         }

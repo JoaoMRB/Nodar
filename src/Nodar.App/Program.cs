@@ -11,6 +11,9 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        // Falhas inesperadas apanhadas pelas sondas de rede e pelos ficheiros ficam no registo de erros.
+        Nodar.Core.NodarLog.Sink = (context, ex) => CrashLog.Write(ex, context);
+
         using var instance = SingleInstance.Acquire(DemoData.IsEnabled);
         if (!instance.IsFirst)
         {

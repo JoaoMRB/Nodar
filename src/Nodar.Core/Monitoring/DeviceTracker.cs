@@ -323,7 +323,7 @@ public sealed class DeviceTracker
                     File.Copy(newest, target);
             }
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, "Migrar dados da versão antiga"))
         {
             // Migração opcional.
         }
@@ -335,9 +335,16 @@ public sealed class DeviceTracker
         {
             return File.Exists(path) ? JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) : default;
         }
-        catch
+        catch (JsonException ex)
         {
-            return default; // ficheiro corrompido: começa vazio em vez de impedir o arranque
+            // Ficheiro corrompido: começa vazio em vez de impedir o arranque, mas guarda uma cópia, porque a
+            // próxima gravação apagaria o histórico.
+            NodarLog.CorruptFile(path, ex);
+            return default;
+        }
+        catch (Exception ex) when (NodarLog.Swallow(ex, $"Ler {Path.GetFileName(path)}"))
+        {
+            return default; // ficheiro bloqueado ou sem permissões
         }
     }
 
@@ -350,7 +357,7 @@ public sealed class DeviceTracker
             File.WriteAllText(temp, JsonSerializer.Serialize(value, JsonOptions));
             File.Move(temp, path, overwrite: true);
         }
-        catch
+        catch (Exception ex) when (NodarLog.Swallow(ex, $"Gravar {Path.GetFileName(path)}"))
         {
             // Falhar a gravação não deve interromper o scan.
         }
