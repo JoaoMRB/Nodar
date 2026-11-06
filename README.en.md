@@ -52,6 +52,7 @@ A Windows app built with C# / .NET 9 and an [Avalonia](https://avaloniaui.net/) 
 - **Service detection** from banners, including HTTPS (TLS) and the DNS server version (`version.bind`). Probes never send credentials or login attempts.
 - **Operating system detection** from the TCP/IP fingerprint (TTL, window size, MSS, DF flag), with a confidence level.
 - **Known vulnerability checks** with official data from the [NVD](https://nvd.nist.gov/) (NIST) and the [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) catalog. See [How vulnerability checking works](#how-vulnerability-checking-works).
+- **Certificates and TLS**: on TLS services (HTTPS, IMAPS…) it reads the certificate and protocol, and flags expired or expiring certificates, weak keys and signatures, obsolete protocols the server still accepts (SSL 3.0, TLS 1.0 and 1.1), and the same factory self-signed certificate on several devices. A self-signed certificate on its own isn't flagged: it's normal on routers and IoT.
 - **Ports opened by the router (UPnP)**: asks the router, with anonymous read-only queries, which ports it opened to the internet, for which device and since when. It highlights exposed remote access, file sharing, databases and cameras, and warns when a new port appears (the temporary ones from games and calls only warn inside the app). It can be turned off in the Options.
 - **What the internet sees**: on request (a button on the *Security* page), it queries the [Shodan InternetDB](https://internetdb.shodan.io/) to show the open ports and CVEs the internet links to your public address, and which of those ports the router opened through UPnP. It never runs by itself. See [Privacy and network](#privacy-and-network).
 
@@ -144,6 +145,7 @@ Each service shows its check status: *checked*, *checked with cached data*, *ver
 - Only the **product identifier** is sent to the NVD (e.g. `cpe:2.3:a:openbsd:openssh`). **No IPs, MACs, hostnames or detected versions are sent.** Version matching happens on your PC.
 - The KEV catalog is downloaded in full, with none of your data.
 - To identify manufacturers, Nodar downloads the public IEEE registry (`standards-oui.ieee.org`) once a month. None of your data is sent.
+- TLS inspection stays on the local network: one handshake that doesn't validate the chain and sends no data, plus three `ClientHello`s (SSL 3.0, TLS 1.0 and 1.1) just to see whether the server answers, with no key exchange. It's part of the *Services and versions* option.
 - Reading the router's UPnP (open ports and external address) is an anonymous, read-only query to the router itself, on the local network: only the router's IP is contacted, nothing is ever changed and there are no credentials. It can be turned off in the Options.
 - **"What the internet sees"** only runs when you press the button, and it's the only feature that sends something off your PC: your **public address**, to the Shodan InternetDB (free, no account). The address comes from the router itself; if it doesn't say, `api.ipify.org` is asked as well. If the router's address isn't public (CGNAT or double NAT), nothing is looked up. Shodan's data is from its last visit to your address and may be days old.
 - ARP, Bonjour/mDNS, SSDP and NetBIOS queries stay on your local network. The UPnP descriptor is only read from the device that announced it, over HTTP on the local network, with size and time limits and without DTD processing (XXE protection).
@@ -183,6 +185,7 @@ src/Nodar.Core/                      # Logic, no UI
     ├── NeighborDiscovery.cs         # ARP discovery (Windows neighbor table)
     ├── MdnsProbe.cs                 # Bonjour/mDNS: name and model
     ├── SsdpProbe.cs                 # SSDP/UPnP: name, manufacturer, model, UPnP stack
+    ├── TlsInspector.cs / TlsAnalyzer.cs  # Certificate, protocol and obsolete protocols; the findings from them
     ├── UpnpGatewayClient.cs         # Ports the router opened (UPnP IGD, read-only)
     ├── InternetExposureService.cs   # What the internet sees of the public address (Shodan InternetDB)
     ├── ExposureAdvice.cs            # Sensitive services and when a port deserves a notification
@@ -227,6 +230,7 @@ Local data (history, watchlist, router MAC, known open ports, preferences and vu
 - iPhones and Android phones can **rotate their private Wi-Fi address** (for example with "rotating address" on iOS 18). When that happens, they show up as a new device.
 - OS detection is **heuristic** and can be wrong, especially for IoT devices.
 - Vulnerability checking depends on the banner. Many devices (routers, cameras, IoT) don't announce a version. A version match **doesn't confirm** the device is vulnerable. It's not a substitute for a proper security audit.
+- Obsolete-TLS detection only tells you what the server **accepts**: finding nothing doesn't prove it refuses them (a server that doesn't answer in time counts as "doesn't accept"). Only ports 443, 8443, 993 and 995 are inspected.
 - CVE descriptions come from the NVD, in English.
 - Notifications depend on auto refresh: with it off, Nodar in the tray won't rescan the network on its own.
 

@@ -52,6 +52,7 @@ Aplicação para Windows feita em C# / .NET 9, com interface em [Avalonia](https
 - **Deteção de serviços** por leitura de banners, incluindo HTTPS (TLS) e a versão do servidor DNS (`version.bind`). As sondas nunca enviam credenciais nem tentativas de login.
 - **Deteção de sistema operativo** por fingerprint TCP/IP (TTL, window size, MSS, flag DF), com nível de confiança.
 - **Verificação de vulnerabilidades conhecidas** com dados oficiais da [NVD](https://nvd.nist.gov/) (NIST) e do catálogo [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog). Ver [Como funciona a verificação de vulnerabilidades](#como-funciona-a-verificação-de-vulnerabilidades).
+- **Certificados e TLS**: nos serviços TLS (HTTPS, IMAPS…) lê o certificado e o protocolo, e assinala certificados expirados ou a expirar, chaves e assinaturas fracas, protocolos antigos que o servidor ainda aceita (SSL 3.0, TLS 1.0 e 1.1) e o mesmo certificado autoassinado de fábrica em vários dispositivos. Um certificado autoassinado, sozinho, não é assinalado: é o normal em routers e IoT.
 - **Portas abertas pelo router (UPnP)**: pergunta ao router, com consultas anónimas e só de leitura, que portas abriu para a internet, para que dispositivo e desde quando. Destaca o acesso remoto, a partilha de ficheiros, as bases de dados e as câmaras expostos, e avisa quando aparece uma porta nova (as temporárias de jogos e chamadas só avisam dentro da app). Pode ser desligado nas Opções.
 - **O que a internet vê**: a pedido (botão na página *Segurança*), consulta o [Shodan InternetDB](https://internetdb.shodan.io/) para mostrar as portas abertas e os CVEs que a internet associa ao teu endereço público, e quais dessas portas o router abriu por UPnP. Nunca corre sozinha. Ver [Privacidade e rede](#privacidade-e-rede).
 
@@ -145,6 +146,7 @@ Cada serviço mostra o estado da verificação: *verificado*, *verificado com ca
 - O catálogo KEV é descarregado inteiro, sem nenhum dado teu.
 - Para identificar fabricantes, o Nodar descarrega o registo público do IEEE (`standards-oui.ieee.org`) uma vez por mês. Nenhum dado teu é enviado.
 - As perguntas ARP, Bonjour/mDNS, SSDP e NetBIOS ficam só na tua rede local. O descritor UPnP só é lido do próprio dispositivo que o anunciou, por HTTP na rede local, com limites de tamanho e tempo e sem processar DTD (proteção contra XXE).
+- A inspeção de TLS fica na rede local: um handshake sem validar a cadeia e sem enviar dados, mais três `ClientHello` (SSL 3.0, TLS 1.0 e 1.1) só para ver se o servidor responde, sem troca de chaves. Faz parte da opção *Serviços e versões*.
 - A leitura UPnP do router (portas abertas e endereço externo) é uma consulta anónima e só de leitura ao próprio router, na rede local: só se fala com o IP do router, nunca se altera nada e não há credenciais. Pode ser desligada nas Opções.
 - **"O que a internet vê"** só corre quando carregas no botão, e é a única função que envia algo para fora do PC: o teu **endereço público**, ao Shodan InternetDB (gratuito, sem conta). O endereço vem do próprio router; se ele não o disser, pergunta-se também a `api.ipify.org`. Se o endereço do router não for público (CGNAT ou duplo NAT), não se consulta nada. Os dados do Shodan são da última vez que ele passou pelo teu endereço e podem ter dias.
 - Os dados ficam em cache em `%LOCALAPPDATA%\Nodar\cache\`: a NVD durante 3 dias e o KEV durante 1. Sem internet, é usada a cache existente e a app avisa.
@@ -183,6 +185,7 @@ src/Nodar.Core/                      # Lógica, sem interface gráfica
     ├── NeighborDiscovery.cs         # Descoberta ARP (tabela de vizinhos do Windows)
     ├── MdnsProbe.cs                 # Bonjour/mDNS: nome e modelo
     ├── SsdpProbe.cs                 # SSDP/UPnP: nome, fabricante, modelo, pilha UPnP
+    ├── TlsInspector.cs / TlsAnalyzer.cs  # Certificado, protocolo e protocolos antigos; problemas daí
     ├── UpnpGatewayClient.cs         # Portas que o router abriu (UPnP IGD, só leitura)
     ├── InternetExposureService.cs   # O que a internet vê do endereço público (Shodan InternetDB)
     ├── ExposureAdvice.cs            # Serviços sensíveis e quando uma porta merece notificação
@@ -227,6 +230,7 @@ Os dados locais (histórico, lista de monitorização, MAC do router, portas abe
 - iPhones e Androids podem **trocar o endereço Wi-Fi privado** (por exemplo, com "endereço rotativo" no iOS 18). Quando isso acontece, aparecem como um dispositivo novo.
 - A deteção de SO é **heurística** e pode falhar, sobretudo com dispositivos IoT.
 - A verificação de vulnerabilidades depende do banner. Muitos dispositivos (routers, câmaras, IoT) não anunciam versão. Uma correspondência por versão **não confirma** que o dispositivo está vulnerável. Não substitui uma auditoria de segurança a sério.
+- A deteção de protocolos TLS antigos só diz o que o servidor **aceita**: se não aparecer nada, não prova que os recusa (um servidor que não responde a tempo conta como "não aceita"). Só se inspecionam as portas 443, 8443, 993 e 995.
 - As descrições dos CVEs vêm da NVD, em inglês.
 - Os avisos dependem da atualização automática: com ela desligada, o Nodar na bandeja não volta a analisar a rede sozinho.
 
