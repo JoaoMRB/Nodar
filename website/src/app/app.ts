@@ -3,11 +3,17 @@ import { SiteNav } from './sections/site-nav';
 import { Hero } from './sections/hero';
 import { ProtocolStrip } from './sections/protocol-strip';
 import { DemoSection } from './sections/demo-section';
+import { Features } from './sections/features';
+import { HowItWorks } from './sections/how-it-works';
+import { Privacy } from './sections/privacy';
+import { Gallery } from './sections/gallery';
+import { Install } from './sections/install';
+import { Faq } from './sections/faq';
 import { SiteFooter } from './sections/site-footer';
 
 @Component({
   selector: 'app-root',
-  imports: [SiteNav, Hero, ProtocolStrip, DemoSection, SiteFooter],
+  imports: [SiteNav, Hero, ProtocolStrip, DemoSection, Features, HowItWorks, Privacy, Gallery, Install, Faq, SiteFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="backdrop" aria-hidden="true">
@@ -23,6 +29,12 @@ import { SiteFooter } from './sections/site-footer';
       <app-hero />
       <app-protocol-strip />
       <app-demo-section />
+      <app-features />
+      <app-how-it-works />
+      <app-privacy />
+      <app-gallery />
+      <app-install />
+      <app-faq />
     </main>
     <app-site-footer />
   `,

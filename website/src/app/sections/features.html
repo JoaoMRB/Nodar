@@ -1,0 +1,58 @@
+@let f = i18n.t().features;
+
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-head" appReveal>
+      <div class="eyebrow"><span class="dot"></span>{{ f.eyebrow }}</div>
+      <h2>{{ f.title }}</h2>
+      <p>{{ f.subtitle }}</p>
+    </div>
+
+    <div class="bento">
+      @for (item of f.items; track $index; let i = $index) {
+        <article class="card" [class]="'card c' + i" [appReveal]="(i % 3) * 80" (pointermove)="spot($event)">
+          <div class="spot" aria-hidden="true"></div>
+
+          @if (i === 0) {
+            <div class="visual radar" aria-hidden="true">
+              <span class="r r1"></span><span class="r r2"></span><span class="r r3"></span>
+              <i class="sw"></i>
+              <b class="blip b1"></b><b class="blip b2"></b><b class="blip b3"></b><b class="blip b4"></b><b class="blip b5"></b>
+            </div>
+          }
+          @if (i === 1) {
+            <div class="visual cves" aria-hidden="true">
+              <div class="cv"><span class="sc crit">10.0</span><code>CVE-2015-3306</code><em>KEV</em></div>
+              <div class="cv"><span class="sc crit">9.8</span><code>CVE-2023-38408</code></div>
+              <div class="cv"><span class="sc high">8.1</span><code>CVE-2024-6387</code></div>
+            </div>
+          }
+
+          <div class="ico"><app-icon [name]="icon(item.icon)" /></div>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.text }}</p>
+          <ul class="tags">
+            @for (tag of item.tags; track tag) {
+              <li>{{ tag }}</li>
+            }
+          </ul>
+        </article>
+      }
+    </div>
+
+    <div class="numbers" appReveal>
+      <div>
+        <strong class="gradient-text">{{ f.bigStat1 }}</strong>
+        <span>{{ f.bigStat1Label }}</span>
+      </div>
+      <div>
+        <strong class="gradient-text">{{ f.bigStat2 }}</strong>
+        <span>{{ f.bigStat2Label }}</span>
+      </div>
+      <div>
+        <strong class="gradient-text">{{ f.bigStat3 }}</strong>
+        <span>{{ f.bigStat3Label }}</span>
+      </div>
+    </div>
+  </div>
+</section>

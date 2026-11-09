@@ -1,0 +1,214 @@
+:host {
+  display: block;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 16px;
+}
+
+.col {
+  position: relative;
+  padding: 30px;
+  overflow: hidden;
+  border-radius: var(--r-xl);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+
+  h3 {
+    font-size: 20px;
+  }
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 20px;
+
+  &.ok {
+    background: rgba(52, 211, 153, 0.14);
+    color: var(--success);
+    box-shadow: 0 0 30px rgba(52, 211, 153, 0.2);
+  }
+
+  &.out {
+    background: var(--accent-soft);
+    color: var(--accent-light);
+  }
+}
+
+.list {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    gap: 12px;
+    color: var(--text);
+    font-size: 15px;
+  }
+
+  app-icon {
+    flex: none;
+    margin-top: 4px;
+    color: var(--success);
+  }
+}
+
+.pc {
+  position: absolute;
+  right: -60px;
+  bottom: -60px;
+  width: 220px;
+  height: 220px;
+  opacity: 0.5;
+}
+
+.pc-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed rgba(52, 211, 153, 0.35);
+  animation: rot 30s linear infinite;
+}
+
+.pc-core {
+  position: absolute;
+  inset: 60px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.25), transparent 70%);
+  color: var(--success);
+  font-size: 40px;
+}
+
+@keyframes rot {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.flows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 70px auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--stroke);
+    border-radius: var(--r-md);
+    background: rgba(255, 255, 255, 0.025);
+  }
+}
+
+.flow-what {
+  min-width: 0;
+
+  strong {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  code {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-3);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.arrow {
+  position: relative;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+
+  i {
+    position: absolute;
+    inset: 0 auto 0 -40%;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, var(--accent-light), transparent);
+    animation: flow 2.4s linear infinite;
+  }
+}
+
+@keyframes flow {
+  to {
+    left: 100%;
+  }
+}
+
+.where {
+  padding: 5px 12px;
+  border: 1px solid var(--stroke-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.foot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 26px;
+  color: var(--text-2);
+  font-size: 14.5px;
+  text-align: center;
+
+  app-icon {
+    flex: none;
+    color: var(--success);
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .col {
+    padding: 22px;
+  }
+
+  .flows li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .arrow {
+    display: none;
+  }
+}
