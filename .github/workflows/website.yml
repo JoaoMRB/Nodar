@@ -1,0 +1,56 @@
+# Publica o site (website/) no GitHub Pages.
+# Ativar uma vez: Settings → Pages → Source: "GitHub Actions".
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'docs/screenshots/**'
+      - 'src/Nodar.App/Assets/**'
+      - '.github/workflows/website.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - run: npm ci
+
+      # O site fica em https://<utilizador>.github.io/<repositório>/
+      - run: npm run build -- --base-href "/${{ github.event.repository.name }}/"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/dist/nodar-site/browser
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
