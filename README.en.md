@@ -4,7 +4,7 @@
 
 <h1 align="center">Nodar</h1>
 
-<p align="center"><a href="README.md">Português</a> · <b>English</b></p>
+<p align="center"><a href="README.md">Português</a> · <b>English</b> · <a href="https://joaomrb.github.io/Nodar/">Website & live demo</a></p>
 
 > See who's on your local network, identify every device, and get notified when someone new shows up.
 
@@ -220,6 +220,7 @@ tests/Nodar.App.Tests/               # Interface tests (Avalonia headless, isola
 tools/IconGenerator/                 # Generates the app icon
 tools/Screenshots/                   # Generates the README screenshots (headless, demo mode)
 docs/screenshots/                    # README screenshots (Portuguese; English in en/)
+website/                             # Showcase website with a live demo (Angular), see website/README.md
 ```
 
 Local data (history, watchlist, **known devices with the names and notes you wrote**, router MAC, known open ports, preferences and vulnerability cache) lives in `%LOCALAPPDATA%\Nodar\`.
