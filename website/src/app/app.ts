@@ -1,8 +1,12 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { SiteNav } from './sections/site-nav';
+import { Hero } from './sections/hero';
+import { ProtocolStrip } from './sections/protocol-strip';
+import { SiteFooter } from './sections/site-footer';
 
 @Component({
   selector: 'app-root',
-  imports: [],
+  imports: [SiteNav, Hero, ProtocolStrip, SiteFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="backdrop" aria-hidden="true">
@@ -13,8 +17,12 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       <div class="grain"></div>
     </div>
 
+    <app-site-nav />
     <main>
+      <app-hero />
+      <app-protocol-strip />
     </main>
+    <app-site-footer />
   `,
   styles: `
     :host { position: relative; display: block; isolation: isolate; }

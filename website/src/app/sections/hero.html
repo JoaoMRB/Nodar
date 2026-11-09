@@ -1,0 +1,64 @@
+@let h = i18n.t().hero;
+
+<section class="hero" id="top">
+  <div class="container copy">
+    <div class="eyebrow"><span class="dot"></span>{{ h.badge }}</div>
+
+    <h1>
+      <span class="line">{{ h.title1 }}</span>
+      <span class="line gradient-text">{{ h.title2 }}</span>
+    </h1>
+
+    <p class="sub">{{ h.subtitle }}</p>
+
+    <div class="ctas">
+      <a class="btn btn-primary" [href]="download" target="_blank" rel="noopener">
+        <app-icon name="windows" />{{ h.ctaDownload }}
+      </a>
+      <a class="btn btn-ghost" href="#demo">
+        <app-icon name="radar" />{{ h.ctaDemo }}
+      </a>
+    </div>
+
+    <ul class="meta">
+      @for (m of h.meta; track m) {
+        <li><app-icon name="check" [stroke]="2.2" />{{ m }}</li>
+      }
+    </ul>
+  </div>
+
+  <div class="stage container" (pointermove)="onMove($event)" (pointerleave)="reset()">
+    <div class="rings" aria-hidden="true">
+      <span></span><span></span><span></span>
+      <i class="sweep"></i>
+    </div>
+
+    <div
+      class="frame"
+      [style.transform]="'perspective(1800px) rotateX(' + (8 + tilt().x) + 'deg) rotateY(' + tilt().y + 'deg)'"
+    >
+      <div class="frame-glow" aria-hidden="true"></div>
+      <img
+        [src]="'screenshots/' + i18n.lang() + '/dispositivos.png'"
+        [alt]="i18n.t().gallery.items[0].caption"
+        width="1440"
+        height="900"
+        fetchpriority="high"
+      />
+      <div class="frame-shine" aria-hidden="true"></div>
+    </div>
+
+    <div class="float f1">
+      <div class="f-ico accent"><app-icon name="sparkle" /></div>
+      <div><strong>{{ h.floatNew }}</strong><span>{{ h.floatNewText }}</span></div>
+    </div>
+    <div class="float f2">
+      <div class="f-ico danger"><app-icon name="flame" /></div>
+      <div><strong>{{ h.floatKev }}</strong><span class="mono">{{ h.floatKevText }}</span></div>
+    </div>
+    <div class="float f3">
+      <div class="f-ico ok"><app-icon name="radar" /></div>
+      <div><strong>{{ h.floatScan }}</strong><span>{{ h.floatScanText }}</span></div>
+    </div>
+  </div>
+</section>
