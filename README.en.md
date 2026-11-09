@@ -276,4 +276,4 @@ This tool is for **networks you own or are explicitly authorized to scan**. Port
 
 ## License
 
-[MIT](LICENSE) © 2026 JoaoRb
+[MIT](LICENSE) © 2026 Malog

@@ -276,4 +276,4 @@ Esta ferramenta é para **redes que são tuas ou que tens autorização explíci
 
 ## Licença
 
-[MIT](LICENSE) © 2026 JoaoRb
+[MIT](LICENSE) © 2026 Malog
