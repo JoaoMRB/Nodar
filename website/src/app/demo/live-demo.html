@@ -1,0 +1,490 @@
+@let tx = t();
+@let a = tx.app;
+@let l = lang();
+
+<div class="window" [class.has-details]="!!selected()">
+  <!-- Barra de título (decorativa, estilo Windows 11) -->
+  <div class="titlebar">
+    <div class="titlebar-brand">
+      <img src="img/nodar-64.png" alt="" width="16" height="16" />
+      <span>Nodar</span>
+    </div>
+    <div class="titlebar-controls" aria-hidden="true">
+      <span class="ctl"><svg viewBox="0 0 10 10"><path d="M1 5h8" /></svg></span>
+      <span class="ctl"><svg viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" rx="1" /></svg></span>
+      <span class="ctl close"><svg viewBox="0 0 10 10"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" /></svg></span>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- Barra lateral -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo"><app-icon name="radar" [stroke]="2" /></div>
+        <div>
+          <div class="brand-name">Nodar</div>
+          <div class="brand-sub">{{ a.localNetwork }}</div>
+        </div>
+      </div>
+      <div class="demo-badge"><app-icon name="sparkle" />{{ a.demoMode }}</div>
+
+      <div class="nav-label">{{ a.view }}</div>
+      <nav class="nav" aria-label="Nodar">
+        <button type="button" class="nav-item" [class.active]="view() === 'devices'" (click)="go('devices')">
+          <app-icon name="grid" /><span>{{ a.devices }}</span>
+          @if (hasScanned() || revealed()) {
+            <span class="count">{{ stats().online }}</span>
+          }
+        </button>
+        <button type="button" class="nav-item" [class.active]="view() === 'security'" (click)="go('security')">
+          <app-icon name="shield" /><span>{{ a.security }}</span>
+          @if (stats().vulns) {
+            <span class="warn-ico"><app-icon name="alert" /></span>
+            <span class="count danger">{{ stats().vulns }}</span>
+          }
+        </button>
+        <button type="button" class="nav-item" [class.active]="view() === 'history'" (click)="go('history')">
+          <app-icon name="clock" /><span>{{ a.history }}</span>
+        </button>
+        <button type="button" class="nav-item" [class.active]="view() === 'watched'" (click)="go('watched')">
+          <app-icon name="eye" /><span>{{ a.watched }}</span>
+          @if (watched().size) {
+            <span class="count">{{ watched().size }}</span>
+          }
+        </button>
+      </nav>
+
+      <div class="net-card">
+        <div class="net-title"><span class="dot"></span>Wi-Fi</div>
+        <dl>
+          <dt>{{ l === 'pt' ? 'Este PC' : 'This PC' }}</dt>
+          <dd>192.168.50.23</dd>
+          <dt>Router</dt>
+          <dd>192.168.50.1</dd>
+          <dt>{{ l === 'pt' ? 'Rede' : 'Network' }}</dt>
+          <dd>192.168.50.0/24</dd>
+        </dl>
+      </div>
+    </aside>
+
+    <!-- Conteúdo -->
+    <main class="main">
+      <header class="main-head">
+        <div class="titles">
+          @switch (view()) {
+            @case ('devices') {
+              <h3>{{ a.devices }}</h3>
+              <p>
+                @if (scanning()) {
+                  {{ a.scanSteps[step()] }}
+                } @else if (hasScanned()) {
+                  {{ stats().online }} {{ a.online }} · {{ a.lastScan }}
+                  @if (toReview()) {
+                    · {{ toReview() }} {{ a.toReview }}
+                  }
+                } @else {
+                  {{ a.neverScanned }}
+                }
+              </p>
+            }
+            @case ('security') {
+              <h3>{{ a.security }}</h3>
+              <p>{{ a.sec.subtitle }}</p>
+            }
+            @case ('history') {
+              <h3>{{ a.history }}</h3>
+              <p>{{ a.hist.today }}</p>
+            }
+            @case ('watched') {
+              <h3>{{ a.watched }}</h3>
+              <p>{{ watched().size }} {{ l === 'pt' ? 'dispositivos' : 'devices' }}</p>
+            }
+          }
+        </div>
+        <div class="actions">
+          @if (view() === 'devices') {
+            <label class="search">
+              <app-icon name="search" />
+              <span class="sr-only">{{ a.search }}</span>
+              <input type="search" [placeholder]="a.search" [value]="query()" (input)="onSearch($event)" />
+            </label>
+          }
+          <button type="button" class="icon-btn" aria-label="Opções" tabindex="-1"><app-icon name="sliders" /></button>
+          <button type="button" class="analyze" [class.busy]="scanning()" (click)="scan()" [disabled]="scanning()">
+            <app-icon name="radar" [stroke]="2" />
+            <span>{{ scanning() ? a.analyzing : a.analyze }}</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="progress" [class.on]="scanning()" aria-hidden="true">
+        <div class="bar" [style.width.%]="progress()"></div>
+      </div>
+
+      <div class="scroll">
+        @switch (view()) {
+          <!-- ===== Dispositivos ===== -->
+          @case ('devices') {
+            <div class="stats">
+              <div class="stat">
+                <div class="stat-label"><span class="dot ok"></span>{{ a.statOnline }}</div>
+                <div class="stat-value">{{ stats().online }}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label"><app-icon name="sparkle" class="ac" />{{ a.statNew }}</div>
+                <div class="stat-value">{{ stats().fresh }}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label"><app-icon name="plug" class="ac" />{{ a.statServices }}</div>
+                <div class="stat-value">{{ stats().services }}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label"><app-icon name="shield" class="dg" />{{ a.statVulns }}</div>
+                <div class="stat-value">
+                  {{ stats().vulns }}
+                  @if (stats().kev) {
+                    <span class="pill kev"><app-icon name="flame" />{{ stats().kev }} KEV</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            @if (hasScanned() || revealed()) {
+              <div class="chips" role="toolbar">
+                @for (f of filters(); track f.id) {
+                  <button
+                    type="button"
+                    class="chip"
+                    [class.active]="filter() === f.id"
+                    (click)="filter.set(f.id)"
+                  >
+                    <app-icon [name]="f.icon" />
+                    <span>{{ a.filters[f.id] }}</span>
+                    <span class="chip-count">{{ f.count }}</span>
+                  </button>
+                }
+              </div>
+            }
+
+            @if (!revealed() && !scanning()) {
+              <div class="empty">
+                <div class="empty-ico"><app-icon name="radar" /></div>
+                <strong>{{ a.neverScanned }}</strong>
+                <span>{{ a.neverScannedText }}</span>
+              </div>
+            }
+
+            <ul class="devices">
+              @for (d of list(); track d.id) {
+                @let c = colors(d);
+                @let tr = trust()[d.id];
+                <li>
+                  <div
+                    class="device"
+                    role="button"
+                    tabindex="0"
+                    [class.selected]="selectedId() === d.id"
+                    (click)="select(d)"
+                    (keydown.enter)="select(d)"
+                    (keydown.space)="$event.preventDefault(); select(d)"
+                  >
+                    <div class="dev-ico" [style.background]="c[0]" [style.color]="c[1]">
+                      <app-icon [name]="d.icon" />
+                    </div>
+                    <div class="dev-main">
+                      <div class="dev-name">
+                        <span class="name">{{ d.name[l] }}</span>
+                        @if (d.isRouter) {
+                          <span class="pill p-accent">{{ a.badgeRouter }}</span>
+                        }
+                        @if (d.isThisPc) {
+                          <span class="pill p-info">{{ a.badgeThisPc }}</span>
+                        }
+                        @if (tr === 'review') {
+                          <span class="pill p-warn">{{ a.badgeReview }}</span>
+                        }
+                        @if (tr === 'suspicious') {
+                          <span class="pill p-danger">{{ a.badgeSuspicious }}</span>
+                        }
+                      </div>
+                      <div class="dev-sub"><span class="mono-num">{{ d.ip }}</span> · {{ d.model[l] }}</div>
+                    </div>
+                    <div class="dev-meta">
+                      @if (d.ports) {
+                        <span class="pill p-muted">{{ portsLabel(d.ports) }}</span>
+                      }
+                      @if (d.cveCount) {
+                        <span class="pill p-cve"><app-icon name="shield" />{{ cveLabel(d) }}</span>
+                      }
+                    </div>
+                    <div class="dev-status"><span class="dot ok"></span>{{ a.statusOnline }}</div>
+                    <button
+                      type="button"
+                      class="star"
+                      [class.on]="watched().has(d.id)"
+                      [attr.aria-pressed]="watched().has(d.id)"
+                      [attr.aria-label]="a.watch + ' ' + d.name[l]"
+                      (click)="toggleWatch(d, $event)"
+                    >
+                      <app-icon name="star" />
+                    </button>
+                  </div>
+                </li>
+              } @empty {
+                @if (revealed()) {
+                  <li class="no-match">{{ a.noMatch }}</li>
+                }
+              }
+              @if (scanning()) {
+                <li class="skeleton" aria-hidden="true"><span></span><span></span></li>
+              }
+            </ul>
+          }
+
+          <!-- ===== Segurança ===== -->
+          @case ('security') {
+            <div class="sec-label">{{ a.sec.upnpTitle }}</div>
+            <div class="card summary">
+              <div class="sum-ico danger"><app-icon name="plug" /></div>
+              <div>
+                <strong>{{ a.sec.upnpSummary }}</strong>
+                <p>{{ a.sec.upnpText }}</p>
+                <small>{{ a.sec.upnpAddr }}</small>
+              </div>
+            </div>
+            @for (p of upnpPorts; track p.port) {
+              <div class="card port" [class.sensitive]="p.sensitive">
+                <div>
+                  <div class="port-head"><span class="mono-num">{{ p.proto }} {{ p.port }}</span> {{ p.desc }}</div>
+                  <div class="port-sub">{{ deviceById(p.dev).name[l] }} · {{ p.target }}</div>
+                  <small>{{ a.sec.firstSeenNow }}</small>
+                </div>
+                <div class="port-side">
+                  @if (p.sensitive) {
+                    <span class="pill p-danger">{{ a.sec.sshExposed }}</span>
+                  }
+                  <small>{{ a.sec.anyAddress }}</small>
+                </div>
+              </div>
+            }
+
+            <div class="sec-label">{{ a.sec.internetTitle }}</div>
+            <div class="card summary">
+              <div class="sum-ico danger"><app-icon name="globe" /></div>
+              <div class="grow">
+                <strong>{{ a.sec.internetSummary }}</strong>
+                <p>{{ a.sec.internetText }}</p>
+                <div class="net-ports">
+                  @for (p of internetPorts; track p.label) {
+                    <span class="net-port" [class.danger]="p.danger">
+                      <b>{{ p.label }}</b>
+                      <small>{{ p.upnp ? a.sec.byUpnp : a.sec.notUpnp }}</small>
+                    </span>
+                  }
+                </div>
+                <div class="cve-links">
+                  <a href="https://nvd.nist.gov/vuln/detail/CVE-2016-6210" target="_blank" rel="noopener">CVE-2016-6210 <app-icon name="external" /></a>
+                  <a href="https://nvd.nist.gov/vuln/detail/CVE-2018-15473" target="_blank" rel="noopener">CVE-2018-15473 <app-icon name="external" /></a>
+                </div>
+              </div>
+            </div>
+
+            <div class="sec-label">{{ a.sec.tlsTitle }}</div>
+            <div class="card summary">
+              <div class="sum-ico warn"><app-icon name="shieldCheck" /></div>
+              <div><strong>{{ a.sec.tlsSummary }}</strong></div>
+            </div>
+            @for (item of a.sec.tlsItems; track item.t; let i = $index) {
+              <div class="card port" [class.high]="i === 0" [class.medium]="i > 0">
+                <div>
+                  <div class="port-head">{{ item.t }}</div>
+                  <div class="port-sub">{{ item.d }}</div>
+                </div>
+                <span class="pill" [class.p-high]="i === 0" [class.p-warn]="i > 0">{{ item.sev }}</span>
+              </div>
+            }
+
+            <div class="sec-label">{{ a.sec.gatewayTitle }}</div>
+            <div class="card summary">
+              <div class="sum-ico ok"><app-icon name="check" /></div>
+              <div><p class="mono-num">{{ a.sec.gatewayText }}</p></div>
+            </div>
+          }
+
+          <!-- ===== Histórico ===== -->
+          @case ('history') {
+            <ol class="timeline">
+              @for (e of a.hist.events; track $index) {
+                @let d = deviceById(e.dev);
+                @let c = colors(d);
+                <li>
+                  <span class="time mono-num">{{ e.time }}</span>
+                  <span class="tl-dot" [class.in]="e.kind !== 'left'" [class.new]="e.kind === 'first'"></span>
+                  <div class="card tl-card">
+                    <div class="dev-ico sm" [style.background]="c[0]" [style.color]="c[1]"><app-icon [name]="d.icon" /></div>
+                    <div>
+                      <strong>{{ d.name[l] }}</strong>
+                      <span class="tl-kind" [class.left]="e.kind === 'left'" [class.new]="e.kind === 'first'">
+                        <app-icon [name]="e.kind === 'left' ? 'arrowOut' : e.kind === 'first' ? 'sparkle' : 'arrowIn'" />
+                        {{ e.kind === 'left' ? a.hist.left : e.kind === 'first' ? a.hist.first : a.hist.joined }}
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              }
+            </ol>
+          }
+
+          <!-- ===== Monitorizados ===== -->
+          @case ('watched') {
+            @if (watchedDevices().length) {
+              <ul class="devices">
+                @for (d of watchedDevices(); track d.id) {
+                  @let c = colors(d);
+                  <li>
+                    <div class="device static">
+                      <div class="dev-ico" [style.background]="c[0]" [style.color]="c[1]"><app-icon [name]="d.icon" /></div>
+                      <div class="dev-main">
+                        <div class="dev-name"><span class="name">{{ d.name[l] }}</span></div>
+                        <div class="dev-sub"><span class="mono-num">{{ d.ip }}</span> · {{ d.model[l] }}</div>
+                      </div>
+                      <div class="dev-status"><span class="dot ok"></span>{{ a.statusOnline }}</div>
+                      <button type="button" class="star on" [attr.aria-label]="a.watch" (click)="toggleWatch(d, $event)">
+                        <app-icon name="star" />
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <div class="empty">
+                <div class="empty-ico"><app-icon name="star" /></div>
+                <strong>{{ a.watch_.empty }}</strong>
+                <span>{{ a.watch_.emptyText }}</span>
+              </div>
+            }
+          }
+        }
+      </div>
+    </main>
+
+    <!-- Painel de detalhes -->
+    @if (selected(); as d) {
+      @let c = colors(d);
+      @let tr = trust()[d.id];
+      <aside class="details" [attr.aria-label]="d.name[l]">
+        <div class="det-head">
+          <div class="dev-ico lg" [style.background]="c[0]" [style.color]="c[1]"><app-icon [name]="d.icon" /></div>
+          <div class="det-title">
+            <h4>{{ d.name[l] }}</h4>
+            <div class="det-sub"><span class="dot ok"></span>{{ a.statusOnline }} · {{ d.vendor }}</div>
+          </div>
+          <button type="button" class="icon-btn ghost" [attr.aria-label]="tx.gallery.close" (click)="selectedId.set(null)">
+            <app-icon name="close" />
+          </button>
+        </div>
+
+        <div class="det-actions">
+          <button type="button" class="btn-sm" [class.on]="watched().has(d.id)" (click)="toggleWatch(d)">
+            <app-icon name="star" />{{ watched().has(d.id) ? a.watching : a.watch }}
+          </button>
+          <button type="button" class="btn-sm" (click)="copyIp(d)">
+            <app-icon [name]="copied() ? 'check' : 'copy'" />{{ copied() ? a.copied : a.copyIp }}
+          </button>
+        </div>
+
+        <div class="det-scroll">
+          @if (!d.isThisPc && !d.isRouter) {
+            <div class="review" [class.suspicious]="tr === 'suspicious'" [class.known]="tr === 'known'">
+              <div class="review-q">{{ a.yourDevice }}</div>
+              <div class="review-btns">
+                <button type="button" class="rv" [class.on]="tr === 'known'" (click)="setTrust(d, 'known')">
+                  <app-icon name="userCheck" />{{ a.mine }}
+                </button>
+                <button type="button" class="rv bad" [class.on]="tr === 'suspicious'" (click)="setTrust(d, 'suspicious')">
+                  <app-icon name="userX" />{{ a.notMine }}
+                </button>
+              </div>
+              @if (d.note) {
+                <div class="note"><span>{{ a.note }}</span>{{ d.note[l] }}</div>
+              } @else if (tr === 'review') {
+                <div class="review-hint">{{ a.reviewHint }}</div>
+              }
+            </div>
+          }
+
+          <dl class="info">
+            <dt>{{ a.fields.ip }}</dt><dd class="mono-num">{{ d.ip }}</dd>
+            <dt>{{ a.fields.mac }}</dt><dd class="mono-num">{{ d.mac }}</dd>
+            <dt>{{ a.fields.hostname }}</dt><dd>{{ d.hostname }}</dd>
+            <dt>{{ a.fields.vendor }}</dt><dd>{{ d.vendor }}</dd>
+            <dt>{{ a.fields.model }}</dt><dd>{{ d.model[l] }}</dd>
+            <dt>{{ a.fields.os }}</dt><dd>{{ d.os }}</dd>
+            <dt>{{ a.fields.firstSeen }}</dt><dd>{{ d.firstSeen }}</dd>
+            <dt>{{ a.fields.lastSeen }}</dt><dd>{{ a.fields.now }}</dd>
+          </dl>
+
+          <div class="det-label">{{ a.services }}</div>
+          @for (s of d.services; track s.port) {
+            <div class="svc">
+              <span class="svc-port mono-num">{{ s.port }}</span>
+              <div>
+                <strong>{{ s.product ?? s.name }}@if (s.distro) { ({{ s.distro }})}</strong>
+                <small>
+                  {{ s.name }} ·
+                  @if (s.product) {
+                    <span class="ok-t">{{ a.verified }}</span>
+                  } @else {
+                    <span class="muted-t">{{ a.noVersion }}</span>
+                  }
+                </small>
+              </div>
+            </div>
+          } @empty {
+            <p class="det-empty">{{ a.noServices }}</p>
+          }
+
+          @if (d.cves.length) {
+            <div class="det-label">{{ a.vulnsTitle }}</div>
+            @if (hasDistro(d)) {
+              <div class="distro"><app-icon name="info" />{{ a.distro }}</div>
+            }
+            @for (v of d.cves; track v.id) {
+              <a class="cve" [href]="nvdUrl(v.id)" target="_blank" rel="noopener">
+                <span class="score" [style.color]="severityColors[v.severity]" [style.border-color]="severityColors[v.severity] + '55'"
+                  [style.background]="severityColors[v.severity] + '1f'">{{ v.score.toFixed(1) }}</span>
+                <div>
+                  <div class="cve-id mono-num">
+                    {{ v.id }}
+                    @if (v.kev) {
+                      <span class="pill kev"><app-icon name="flame" />KEV</span>
+                    }
+                    <app-icon name="external" class="ext" />
+                  </div>
+                  <small>{{ v.summary[l] }}</small>
+                </div>
+              </a>
+            }
+            <p class="det-more">{{ i18n.format(a.showing, d.cves.length, d.cveCount) }}</p>
+          }
+        </div>
+      </aside>
+    }
+  </div>
+
+  <!-- Avisos discretos dentro da app -->
+  <div class="toasts" aria-live="polite">
+    @for (toast of toasts(); track toast.id) {
+      <div [class]="'toast t-' + toast.tone">
+        <div class="toast-ico"><app-icon [name]="toast.icon" /></div>
+        <div class="toast-body">
+          <strong>{{ toast.title }}</strong>
+          <span>{{ toast.text }}</span>
+        </div>
+        <button type="button" class="toast-x" [attr.aria-label]="tx.gallery.close" (click)="dismiss(toast.id)">
+          <app-icon name="close" />
+        </button>
+      </div>
+    }
+  </div>
+</div>
